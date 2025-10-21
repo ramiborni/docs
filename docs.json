@@ -11,12 +11,6 @@
   "navigation": {
     "groups": [
       {
-        "group": "Overview",
-        "pages": [
-          "/"
-        ]
-      },
-      {
         "group": "Operations",
         "pages": [
           "docs/operations/rate-limits"
