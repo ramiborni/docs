@@ -1,0 +1,96 @@
+---
+title: "Get Account Status"
+api: "GET /account-status"
+description: "Retrieve quota and connectivity status for a managed account"
+---
+
+Query the health and capacity of a SendPilot-managed LinkedIn account. Use this endpoint to verify remaining quota and confirm whether an account is currently connected.
+
+## Query Parameters
+
+<ParamField query="accountId" type="string" required>
+  SendPilot-managed account identifier to inspect.
+</ParamField>
+
+## Response
+
+<ResponseField name="accounts" type="array" required>
+  Array of account status objects.
+  
+  <Expandable title="Account Status object">
+    <ResponseField name="accountId" type="string" required>
+      Unique identifier for the SendPilot account.
+    </ResponseField>
+    
+    <ResponseField name="status" type="string" required>
+      Account state: `ACTIVE`, `DISCONNECTED`, or `DELETED`.
+    </ResponseField>
+    
+    <ResponseField name="remainingConnectionRequests" type="integer">
+      Remaining connection invites for the current period (minimum: 0).
+    </ResponseField>
+    
+    <ResponseField name="remainingMessages" type="integer">
+      Remaining message quota for the current period (minimum: 0).
+    </ResponseField>
+    
+    <ResponseField name="dailyConnectionCap" type="integer">
+      Maximum connection requests allowed per day.
+    </ResponseField>
+    
+    <ResponseField name="dailyMessageCap" type="integer">
+      Maximum messages allowed per day.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET "https://api.sendpilot.example.com/account-status?accountId=acc_sendpilot_001" \
+  -H "X-API-KEY: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "accounts": [
+    {
+      "accountId": "acc_sendpilot_001",
+      "status": "ACTIVE",
+      "remainingConnectionRequests": 20,
+      "remainingMessages": 20,
+      "dailyConnectionCap": 20,
+      "dailyMessageCap": 20
+    }
+  ]
+}
+```
+
+## Account Status Types
+
+<ResponseField name="ACTIVE" type="status">
+  **Active**: Account is connected and has available quota. Safe to send connection requests and messages.
+</ResponseField>
+
+<ResponseField name="DISCONNECTED" type="status">
+  **Disconnected**: Account is temporarily disconnected and cannot send until reconnected.
+</ResponseField>
+
+<ResponseField name="DELETED" type="status">
+  **Deleted**: Account has been removed from the pool. Do not route new activity to this account.
+</ResponseField>
+
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 400 | `invalid_account_id` | The provided account ID does not exist |
+| 429 | `rate_limit_exceeded` | Exceeded 100 requests per minute |
+
+## See Also
+
+- [Account Pools](/operations/account-pools) - How SendPilot manages account infrastructure
+- [Rate Limits](/operations/rate-limits) - Understanding quotas and limits

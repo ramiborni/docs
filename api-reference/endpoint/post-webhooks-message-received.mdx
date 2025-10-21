@@ -1,0 +1,384 @@
+---
+title: "Message Received Webhook"
+api: "POST /webhooks/message-received"
+description: "Webhook payload invoked when a LinkedIn message arrives"
+tags:
+  - webhooks
+  - proposed
+---
+
+SendPilot delivers inbound LinkedIn messages to Staffer via webhooks in real-time. Configure your webhook endpoint to receive and process candidate responses.
+
+<Info>
+This webhook is in **proposed** status. Field names and structures may change before finalization.
+</Info>
+
+## Proposed Webhook Event
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for this webhook event. Use for idempotency tracking.
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Type of message event. Values: `message.received`, `message.read`.
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot captured the event.
+</ParamField>
+
+<ParamField body="accountId" type="string" required>
+  SendPilot-managed account identifier.
+</ParamField>
+
+<ParamField body="conversationId" type="string" required>
+  Unique conversation thread identifier.
+</ParamField>
+
+<ParamField body="message" type="object" required>
+  Message details for the event.
+  
+  <Expandable title="Message object">
+    <ParamField body="messageId" type="string" required>
+      Unique message identifier.
+    </ParamField>
+    
+    <ParamField body="text" type="string">
+      Message body content.
+    </ParamField>
+    
+    <ParamField body="sender" type="object" required>
+      Information about the message sender.
+      
+      <Expandable title="Sender object">
+        <ParamField body="profileId" type="string" required>
+          LinkedIn profile identifier for the sender.
+        </ParamField>
+        
+        <ParamField body="name" type="string">
+          Display name of the sender.
+        </ParamField>
+        
+        <ParamField body="profileUrl" type="string">
+          Public LinkedIn profile URL.
+        </ParamField>
+      </Expandable>
+    </ParamField>
+    
+    <ParamField body="sentAt" type="string" required>
+      ISO-8601 timestamp when the message was sent.
+    </ParamField>
+    
+    <ParamField body="attachments" type="array">
+      Media or file attachments included with the message.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Proposed Webhook Payload Example
+
+```json
+{
+  "eventId": "evt_01j0ghi789",
+  "eventType": "message.received",
+  "timestamp": "2025-01-05T14:23:10.965Z",
+  "accountId": "acc_sendpilot_001",
+  "conversationId": "conv_R8JxM9WX7eoHLp6gSVtWQ",
+  "message": {
+    "messageId": "msg_01j0ghi789",
+    "text": "Thanks for reaching out! I'd be interested in learning more about the role.",
+    "sender": {
+      "profileId": "urn:li:member:123456789",
+      "name": "Alex Martinez",
+      "profileUrl": "https://www.linkedin.com/in/alex-martinez/"
+    },
+    "sentAt": "2025-01-05T14:23:05Z",
+    "attachments": []
+  }
+}
+```
+
+## Implementation Guidance
+
+### Basic Handler
+
+```javascript
+// Express.js example
+app.post('/webhooks/message-received', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  // 1. Verify webhook signature
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  // 2. Check for duplicate events (idempotency)
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ status: 'already_processed' });
+  }
+  
+  // 3. Process the message
+  try {
+    await processInboundMessage(event);
+    
+    // 4. Mark event as processed
+    await markEventProcessed(event.eventId);
+    
+    // 5. Respond with 200 to acknowledge receipt
+    res.status(200).json({ status: 'processed' });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    // Return 500 to trigger SendPilot retry
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+### Signature Verification
+
+Verify the webhook signature to ensure requests are from SendPilot:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const parts = signature.split(',');
+  const timestamp = parts[0].split('=')[1];
+  const signatureHash = parts[1].split('=')[1];
+  
+  // Prevent replay attacks - reject old timestamps
+  const age = Date.now() / 1000 - parseInt(timestamp);
+  if (age > 300) { // 5 minutes
+    return false;
+  }
+  
+  const signedPayload = `${timestamp}.${JSON.stringify(payload)}`;
+  const expectedHash = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedHash),
+    Buffer.from(signatureHash)
+  );
+}
+```
+
+### Idempotency Handling
+
+Prevent duplicate processing using the `eventId`:
+
+```javascript
+const processedEvents = new Set(); // In production, use Redis or database
+
+async function checkEventProcessed(eventId) {
+  return processedEvents.has(eventId);
+}
+
+async function markEventProcessed(eventId) {
+  processedEvents.add(eventId);
+  
+  // In production: Store in database with TTL
+  await redis.setex(`webhook:${eventId}`, 86400, 'processed');
+}
+```
+
+### Message Processing
+
+Process the inbound message and trigger your AI response:
+
+```javascript
+async function processInboundMessage(event) {
+  const { eventId, eventType, accountId, conversationId, message, timestamp } = event;
+  
+  // 1. Store message in database
+  await db.messages.create({
+    eventId,
+    messageId: message.messageId,
+    conversationId,
+    accountId,
+    senderProfileId: message.sender.profileId,
+    senderName: message.sender.name,
+    text: message.text,
+    eventType,
+    receivedAt: new Date(timestamp)
+  });
+  
+  // 2. Only process inbound candidate messages
+  if (eventType !== 'message.received') {
+    return;
+  }
+  
+  // 3. Generate AI response
+  const context = await getConversationContext(conversationId);
+  const aiResponse = await generateResponse(message.text, context);
+  
+  // 4. Send response via SendPilot
+  await fetch('https://api.sendpilot.example.com/message', {
+    method: 'POST',
+    headers: {
+      'X-API-KEY': SENDPILOT_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      accountId,
+      leadUrl: message.sender.profileUrl,
+      text: aiResponse
+    })
+  });
+}
+```
+
+## Webhook Configuration
+
+Provide SendPilot with your webhook endpoint details during onboarding:
+
+1. **Endpoint URL**: `https://api.staffer.example.com/webhooks/message-received`
+2. **Webhook Secret**: SendPilot will provide a secret for signature verification
+3. **IP Whitelist** (optional): Restrict requests to SendPilot's IP ranges
+
+## Retry Behavior
+
+SendPilot implements automatic retries for failed webhook deliveries:
+
+- **Retry on**: 5xx errors, network timeouts
+- **No retry on**: 2xx, 4xx responses
+- **Retry schedule**: Exponential backoff (1s, 5s, 30s, 5m, 30m)
+- **Max attempts**: 5
+
+<Warning>
+Always respond with `200 OK` once you've successfully received and queued the webhook for processing. Respond with `5xx` only if you want SendPilot to retry.
+</Warning>
+
+## Response Codes
+
+| Status | Meaning | SendPilot Action |
+|--------|---------|------------------|
+| 200 | Success - event processed | No retry |
+| 400 | Invalid payload | No retry, log error |
+| 401 | Signature validation failed | No retry, alert SendPilot team |
+| 500 | Temporary failure | Retry with exponential backoff |
+
+## Testing Webhooks
+
+### Local Development
+
+Use tools like ngrok to expose your local server:
+
+```bash
+ngrok http 3000
+```
+
+Provide the ngrok URL to SendPilot for testing:
+```
+https://abc123.ngrok.io/webhooks/message-received
+```
+
+### Test Events
+
+Request test webhook events from SendPilot to validate your implementation:
+
+```bash
+curl -X POST https://api.sendpilot.example.com/webhooks/test \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "webhookType": "message.received",
+    "targetUrl": "https://your-domain.com/webhooks/message-received"
+  }'
+```
+
+## Best Practices
+
+<Tip>
+Process webhooks asynchronously. Acknowledge receipt immediately (return 200) and queue the actual processing.
+</Tip>
+
+### Async Processing Pattern
+
+```javascript
+const queue = require('bull'); // Or any queue system
+const messageQueue = new queue('message-processing');
+
+app.post('/webhooks/message-received', async (req, res) => {
+  // Verify signature
+  if (!verifyWebhookSignature(req.body, req.headers['x-sendpilot-signature'], WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  // Immediately acknowledge and queue for processing
+  await messageQueue.add(req.body);
+  res.status(200).json({ status: 'queued' });
+});
+
+// Process asynchronously
+messageQueue.process(async (job) => {
+  const event = job.data;
+  await processInboundMessage(event);
+});
+```
+
+### Monitoring
+
+Track webhook delivery health:
+
+```javascript
+const metrics = {
+  received: 0,
+  processed: 0,
+  failed: 0,
+  duplicates: 0
+};
+
+app.post('/webhooks/message-received', async (req, res) => {
+  metrics.received++;
+  
+  try {
+    const isDuplicate = await checkEventProcessed(req.body.message.messageId);
+    if (isDuplicate) {
+      metrics.duplicates++;
+      return res.status(200).json({ status: 'already_processed' });
+    }
+    
+    await processInboundMessage(req.body);
+    metrics.processed++;
+    res.status(200).json({ status: 'processed' });
+  } catch (error) {
+    metrics.failed++;
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+
+// Expose metrics endpoint
+app.get('/metrics/webhooks', (req, res) => {
+  res.json(metrics);
+});
+```
+
+## Security Considerations
+
+1. **Always verify signatures**: Never process unverified webhook requests
+2. **Implement replay protection**: Check timestamp age in signatures
+3. **Use HTTPS**: Webhook endpoints must use TLS/SSL
+4. **Rate limiting**: Protect against malicious flood attacks
+5. **IP whitelisting**: Restrict to SendPilot's IP ranges if possible
+
+## Common Issues
+
+| Issue | Cause | Solution |
+|-------|-------|----------|
+| Signature validation fails | Incorrect secret or payload parsing | Verify webhook secret, ensure payload is raw JSON |
+| Duplicate events | SendPilot retries after timeout | Implement idempotency using `eventId` |
+| Timeouts | Slow synchronous processing | Move processing to async queue |
+| Missing webhooks | Endpoint downtime or 5xx errors | Monitor uptime, implement fallback polling |
+
+## See Also
+
+- [Authentication](/api-reference/authentication) - Webhook signature verification
+- [Get Messages](/api-reference/endpoint/get-messages) - Polling fallback for missed webhooks
+- [Send Message](/api-reference/endpoint/post-message) - Responding to candidate messages
+

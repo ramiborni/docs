@@ -1,0 +1,69 @@
+---
+title: "Logout Account"
+api: "POST /account/logout"
+description: "Disconnect a SendPilot-managed LinkedIn account"
+tags:
+  - accounts
+---
+
+Trigger a managed account logout. Use this endpoint to invalidate the active LinkedIn session while keeping the account record for future reconnect attempts.
+
+## Request Body
+
+<ParamField body="accountId" type="string" required>
+  SendPilot-managed account identifier to disconnect.
+</ParamField>
+
+## Response
+
+<ResponseField name="action" type="string" required>
+  Operation outcome. Returns `disconnected` when the account session is terminated or `failed/not_found` if the account cannot be located.
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST "https://api.sendpilot.example.com/account/logout" \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "acc_sendpilot_001"
+  }'
+```
+
+## Example Responses
+
+<Expandable title="Successful logout">
+
+```json
+{
+  "action": "disconnected"
+}
+```
+
+</Expandable>
+
+<Expandable title="Account not found">
+
+```json
+{
+  "action": "failed/not_found"
+}
+```
+
+</Expandable>
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 400 | `invalid_account_id` | The provided account ID is malformed |
+| 404 | `account_not_found` | Account does not exist or is already removed |
+| 409 | `account_already_disconnected` | Account session is already disconnected |
+| 500 | `unexpected_error` | Internal failure while processing logout |
+
+## See Also
+
+- [Get Account Status](/api-reference/endpoint/get-account-status) — Verify the resulting status and quotas.
+- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) — Restore access after a logout.
+

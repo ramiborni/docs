@@ -1,0 +1,187 @@
+---
+title: "Authentication"
+description: "Secure your API requests with authentication"
+---
+
+## API Key Authentication
+
+All requests to the SendPilot API must be authenticated using an API key. Include your API key in the `X-API-KEY` header of every request:
+
+```bash
+curl https://api.sendpilot.example.com/connection-request \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "targetProfileId": "urn:li:member:123456789",
+    "message": "Hi, I'd love to connect!"
+  }'
+```
+
+## Obtaining API Keys
+
+API keys are provisioned by SendPilot during the partnership onboarding process. Each environment (staging, production) will receive separate API keys:
+
+1. **Staging API Key**: For development and testing
+2. **Production API Key**: For live integration
+
+Contact your SendPilot integration partner to request API keys.
+
+## API Key Security
+
+<Warning>
+Your API keys carry sensitive privileges. Keep them secure at all times.
+</Warning>
+
+### Best Practices
+
+- **Never commit API keys** to version control (use environment variables)
+- **Rotate keys regularly** (at least every 90 days)
+- **Use separate keys** for staging and production environments
+- **Restrict key access** to only the team members who need it
+- **Monitor usage** for unexpected patterns that might indicate compromise
+
+### Storing Keys Securely
+
+Store API keys in environment variables or a secure secrets management system:
+
+```bash
+# .env file (never commit this)
+SENDPILOT_API_KEY=sp_live_abc123xyz...
+```
+
+```javascript
+// Node.js example
+const apiKey = process.env.SENDPILOT_API_KEY;
+
+const response = await fetch('https://api.sendpilot.example.com/message', {
+  method: 'POST',
+  headers: {
+    'X-API-KEY': apiKey,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    conversationId: 'conv_01hx123',
+    message: 'Thanks for connecting!'
+  })
+});
+```
+
+## Webhook Authentication
+
+Inbound webhook requests from SendPilot include a signature header for verification:
+
+```
+X-SendPilot-Signature: t=1234567890,v1=abc123...
+```
+
+### Verifying Webhook Signatures
+
+Verify webhook signatures to ensure requests genuinely come from SendPilot:
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const parts = signature.split(',');
+  const timestamp = parts[0].split('=')[1];
+  const signatureHash = parts[1].split('=')[1];
+  
+  const signedPayload = `${timestamp}.${payload}`;
+  const expectedHash = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedHash),
+    Buffer.from(signatureHash)
+  );
+}
+
+// In your webhook handler
+app.post('/webhooks/message-received', (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  const isValid = verifyWebhookSignature(
+    JSON.stringify(req.body),
+    signature,
+    process.env.WEBHOOK_SECRET
+  );
+  
+  if (!isValid) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  // Process webhook...
+});
+```
+
+<Tip>
+SendPilot provides a webhook secret during onboarding. Store it securely alongside your API key.
+</Tip>
+
+## Error Responses
+
+### 401 Unauthorized
+
+Returned when authentication fails:
+
+```json
+{
+  "error": "unauthorized",
+  "message": "Invalid or missing API key"
+}
+```
+
+**Common causes:**
+- Missing `X-API-KEY` header
+- Invalid API key format
+- Expired or revoked API key
+- Using staging key in production (or vice versa)
+
+### 403 Forbidden
+
+Returned when authentication succeeds but you lack permission:
+
+```json
+{
+  "error": "forbidden",
+  "message": "API key does not have permission to access this resource"
+}
+```
+
+## Key Rotation
+
+If you suspect your API key has been compromised:
+
+1. **Immediately contact SendPilot support** to revoke the compromised key
+2. **Request a new API key** for the affected environment
+3. **Update your application** with the new key
+4. **Monitor API logs** for unauthorized usage
+
+## Multiple Environments
+
+Use different API keys for each environment to isolate concerns:
+
+| Environment | Key Format | Base URL |
+|------------|-----------|----------|
+| Staging | `sp_test_...` | `https://staging-api.sendpilot.example.com` |
+| Production | `sp_live_...` | `https://api.sendpilot.example.com` |
+
+Configure your application to select the appropriate key based on the environment:
+
+```javascript
+const config = {
+  staging: {
+    apiKey: process.env.SENDPILOT_STAGING_KEY,
+    baseUrl: 'https://staging-api.sendpilot.example.com'
+  },
+  production: {
+    apiKey: process.env.SENDPILOT_PRODUCTION_KEY,
+    baseUrl: 'https://api.sendpilot.example.com'
+  }
+};
+
+const env = process.env.NODE_ENV || 'staging';
+const { apiKey, baseUrl } = config[env];
+```
+

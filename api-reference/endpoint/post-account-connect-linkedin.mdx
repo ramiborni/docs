@@ -1,0 +1,200 @@
+---
+title: "Connect LinkedIn Account"
+api: "POST /account/connect-linkedin"
+description: "Register or refresh LinkedIn account credentials with SendPilot"
+tags:
+  - accounts
+---
+
+Register a LinkedIn session with SendPilot or refresh credentials for an existing managed account. Use:
+- `POST /account/connect-linkedin` when onboarding a brand-new LinkedIn profile.
+- `POST /account/reconnect-linkedin` when updating credentials or restoring access for a previously connected profile.
+
+Both endpoints accept the same payload and return the same response format.
+
+## Request Body
+
+<ParamField body="email" type="string">
+  LinkedIn login email. Required if `password` is supplied; omit when using cookie-based authentication only.
+</ParamField>
+
+<ParamField body="password" type="string">
+  LinkedIn login password. Required if `email` is supplied; omit when using cookies only.
+</ParamField>
+
+<ParamField body="accessToken" type="string">
+  LinkedIn session cookie (`li_at`). Required when not sending `email` and `password`.
+</ParamField>
+
+<ParamField body="premiumToken" type="string">
+  LinkedIn premium session cookie (`li_a`). Needed for Recruiter or Sales Navigator access; optional otherwise.
+</ParamField>
+
+<ParamField body="userAgent" type="string" required>
+  Browser `navigator.userAgent` string captured from a valid LinkedIn session.
+</ParamField>
+
+<ParamField body="country" type="string" required>
+  ISO 3166-1 alpha-2 country code describing the account's locale (for example, `US`, `GB`).
+</ParamField>
+
+<ParamField body="custom_proxy" type="object">
+  Optional proxy configuration used when routing LinkedIn traffic through your own proxy.
+
+  <Expandable title="properties">
+    <ParamField body="protocol" type="string">
+      Proxy protocol. Allowed values: `https`, `http`, `socks5`.
+    </ParamField>
+    <ParamField body="host" type="string">
+      Proxy hostname or IP address.
+    </ParamField>
+    <ParamField body="port" type="number">
+      Proxy port.
+    </ParamField>
+    <ParamField body="username" type="string">
+      Optional username for proxy authentication.
+    </ParamField>
+    <ParamField body="password" type="string">
+      Optional password for proxy authentication.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Response
+
+<ResponseField name="action" type="string">
+  `account_created` when onboarding succeeds, `account_reconnected` when credentials are refreshed.
+</ResponseField>
+
+<ResponseField name="data" type="object">
+  Additional response metadata.
+
+  <Expandable title="properties">
+    <ResponseField name="accountId" type="string">
+      Identifier of the SendPilot-managed account associated with this LinkedIn session.
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Requests
+
+```bash
+curl -X POST https://api.sendpilot.example.com/account/connect-linkedin \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "recruiter@example.com",
+    "password": "hunter2",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "country": "US"
+  }'
+```
+
+```bash
+curl -X POST https://api.sendpilot.example.com/account/reconnect-linkedin \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accessToken": "AQEDARi...",
+    "premiumToken": "AQEDARp...",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "country": "GB",
+    "custom_proxy": {
+      "protocol": "https",
+      "host": "proxy.example.com",
+      "port": 8443,
+      "username": "proxyuser",
+      "password": "proxypass"
+    }
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "action": "account_created",
+  "data": {
+    "accountId": "acc_sendpilot_001"
+  }
+}
+```
+
+## Retry & Fallback Strategy
+
+- **Credentials expire**: Expect to re-run `POST /account/reconnect-linkedin` when LinkedIn prompts for security checks or session refresh.
+- **Proxy failures**: Handle `errors/proxy_auth_error` by retrying with updated proxy credentials or by removing the proxy block.
+- **Parallel attempts**: If multiple reconnection attempts run simultaneously, the API returns `errors/auth_in_progress`; back off and retry later.
+
+## Best Practices
+
+- Store `accountId` returned in the response for future reconciliation.
+- Capture a fresh `userAgent` string whenever cookies change to avoid LinkedIn fingerprint mismatches.
+- Avoid mixing email/password and cookie-based flows in a single request; choose one path for clarity.
+- If you rely on proxies, ensure the protocol matches the endpoint (LinkedIn generally requires `https`).
+
+## Common Errors
+
+| Status | Possible `action` values | Description |
+| --- | --- | --- |
+| 200 | `account_created`, `account_reconnected` | Account session successfully stored in SendPilot. |
+| 400 | `errors/invalid_parameters`, `errors/malformed_request`, `errors/content_too_large`, `errors/invalid_url`, `errors/too_many_characters`, `errors/unescaped_characters`, `errors/missing_parameters` | Payload validation failures. |
+| 401 | `errors/invalid_credentials` | LinkedIn rejected the provided credentials or cookies. |
+| 403 | `errors/account_restricted`, `errors/account_mismatch`, `errors/insufficient_permissions`, `errors/session_mismatch`, `errors/feature_not_subscribed`, `errors/subscription_required`, `errors/unknown_authentication_context`, `errors/action_required`, `errors/resource_access_restricted` | LinkedIn account cannot be used due to restrictions or feature limitations. |
+| 407 | `errors/proxy_auth_error` | Proxy authentication failed. |
+| 408 | `errors/request_timeout` | LinkedIn session validation timed out. |
+| 409 | `errors/operation_canceled`, `errors/already_exists` | Conflicting connect request already in progress or session already connected. |
+| 425 | `errors/auth_in_progress` | An authentication flow is already underway; retry later. |
+| 429 | `errors/rate_limit_exceeded` | Too many connect attempts in a short period. |
+| 500 | `errors/unexpected_error`, `errors/provider_error`, `errors/authentication_intent_error` | Upstream provider or infrastructure issues. |
+
+## Automation Workflow
+
+```javascript
+async function connectLinkedInAccount(payload) {
+  const response = await fetch('https://api.sendpilot.example.com/account/connect-linkedin', {
+    method: 'POST',
+    headers: {
+      'X-API-KEY': API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(`Connect failed: ${error.action}`);
+  }
+
+  return response.json();
+}
+```
+
+```javascript
+async function rotateCredentials(account) {
+  try {
+    const result = await connectLinkedInAccount({
+      accessToken: account.li_at,
+      premiumToken: account.li_a,
+      userAgent: account.userAgent,
+      country: account.country,
+      custom_proxy: account.proxy
+    });
+
+    console.log('Connected account', result.data.accountId);
+  } catch (error) {
+    if (error.message.includes('errors/auth_in_progress')) {
+      await wait(10000);
+      return rotateCredentials(account);
+    }
+
+    throw error;
+  }
+}
+```
+
+## See Also
+
+- [Get Account Status](/api-reference/endpoint/get-account-status) — Verify account health and quota.
+- [Send Connection Request](/api-reference/endpoint/post-connection-request) — Use connected accounts to send invites.
+- [Send Message](/api-reference/endpoint/post-message) — Deliver follow-up messages once the account is connected.

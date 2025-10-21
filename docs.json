@@ -1,0 +1,59 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "SendPilot x Staffer API",
+  "colors": {
+    "primary": "#2A1A38",
+    "light": "#FFF1AE",
+    "dark": "#2A1A38"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": [
+          "docs/index"
+        ]
+      },
+      {
+        "group": "Operations",
+        "pages": [
+          "docs/operations/rate-limits"
+        ]
+      },
+      {
+        "group": "API Reference",
+        "pages": [
+          "api-reference/introduction",
+          "api-reference/authentication"
+        ]
+      },
+      {
+        "group": "Messaging",
+        "pages": [
+          "api-reference/endpoint/post-connection-request",
+          "api-reference/endpoint/post-message",
+          "api-reference/endpoint/get-messages"
+        ]
+      },
+      {
+        "group": "Accounts",
+        "pages": [
+          "api-reference/endpoint/get-account-status",
+          "api-reference/endpoint/post-account-logout",
+          "api-reference/endpoint/post-account-connect-linkedin"
+        ]
+      },
+      {
+        "group": "Webhooks",
+        "pages": [
+          "api-reference/endpoint/post-webhooks-message-received",
+          "api-reference/endpoint/post-webhooks-linkedin-account-status",
+          "api-reference/endpoint/post-webhooks-linkedin-account-accepted"
+        ]
+      }
+    ]
+  },
+  "openapi": "/schemas/sendpilot.yaml"
+}

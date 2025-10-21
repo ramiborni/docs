@@ -1,0 +1,80 @@
+---
+title: "Send Connection Request"
+api: "POST /connection-request"
+description: "Queue a LinkedIn connection request through a managed account in the SendPilot pool"
+---
+
+Send a LinkedIn connection request to a target candidate. The request is queued and processed asynchronously by SendPilot's managed account infrastructure.
+
+## Request Body
+
+<ParamField body="leadUrl" type="string" required>
+  Public LinkedIn profile URL for the target lead.
+  
+  Example: `https://www.linkedin.com/in/alex-example/`
+</ParamField>
+
+<ParamField body="providerId" type="string" required>
+  Identifier of the connected LinkedIn provider returned by the connect-account flow.
+  
+  Example: `prov_li_acc_001`
+</ParamField>
+
+<ParamField body="connectionNote" type="string">
+  Optional invitation message to deliver with the request. Premium accounts can send up to 300 characters; standard accounts should stay under 200.
+</ParamField>
+
+## Response
+
+<ResponseField name="action" type="string">
+  Outcome of the submission. Returns `connection_sent` when the connection request is handed off for delivery.
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST https://api.sendpilot.example.com/connection-request \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "leadUrl": "https://www.linkedin.com/in/alex-example/",
+    "providerId": "prov_li_acc_001",
+    "connectionNote": "Hi Alex, I'd love to connect and share more about our open role."
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "action": "connection_sent"
+}
+```
+
+## Best Practices
+
+<Tip>
+  **Personalize messages**: Connection requests with personalized messages have higher acceptance rates.
+</Tip>
+
+- Keep notes under 200 characters unless you are certain the provider has premium messaging limits (max 300)
+- Confirm the `providerId` corresponds to a connected LinkedIn account before sending batches
+- Validate LinkedIn URLs prior to submission to avoid malformed request errors
+- Retry on transient infrastructure errors (503/504) with exponential backoff
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 400 | `errors/invalid_parameters`, `errors/malformed_request`, `errors/content_too_large`, `errors/invalid_url`, `errors/too_many_characters`, `errors/unescaped_characters`, `errors/missing_parameters` | The payload is invalid, malformed, or the note exceeds allowed limits |
+| 401 | `errors/account_disconnected` | The selected provider account is no longer connected |
+| 404 | `errors/not_found` | The LinkedIn profile could not be located or the URL is corrupted |
+| 500 | `errors/unexpected_error`, `errors/provider_error`, `errors/authentication_intent_error` | SendPilot or LinkedIn provider encountered an unexpected failure |
+| 503 | `errors/no_client_session`, `errors/no_channel`, `errors/no_handler`, `errors/network_down`, `errors/service_unavailable` | Temporary infrastructure issue prevented delivery |
+| 504 | `errors/request_timeout` | LinkedIn did not respond in time |
+
+## See Also
+
+- [Account Status](/api-reference/endpoint/get-account-status) - Check available quota
+- [Account Pools](/operations/account-pools) - How account selection works
+

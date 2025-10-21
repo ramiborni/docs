@@ -1,0 +1,60 @@
+---
+title: "API Reference"
+description: "Integrate with SendPilot's LinkedIn Transport API"
+---
+
+The SendPilot LinkedIn Transport API enables Staffer to programmatically send LinkedIn connection requests and messages through SendPilot's managed account infrastructure.
+
+## Base URL
+
+```
+https://api.sendpilot.example.com
+```
+
+## Endpoints
+
+### Messaging
+* **POST /connection-request**: Send LinkedIn connection requests to target candidates
+* **POST /message**: Send LinkedIn messages to existing connections
+* **GET /messages**: Poll for recent LinkedIn messages for reconciliation
+
+### Accounts
+* **GET /account-status**: Retrieve health status, quotas, and limits for managed accounts
+
+### Webhooks
+* **POST /webhooks/message-received** *(Proposed)*: Webhook endpoint for receiving inbound LinkedIn messages
+* **POST /webhooks/linkedin/account-status** *(Proposed)*: Webhook endpoint for account status and connectivity updates
+* **POST /webhooks/linkedin/account-accepted** *(Proposed)*: Webhook endpoint when an invitation is accepted
+
+## Authentication
+
+All API requests require authentication using an API key. Include your API key in the request header:
+
+```bash
+X-API-KEY: YOUR_API_KEY
+```
+
+<Warning>
+Keep your API keys secret. Never commit them to version control or expose them in client-side code.
+</Warning>
+
+## Error Handling
+
+The API uses standard HTTP status codes and returns structured error responses:
+
+```json
+{
+  "error": "rate_limit_exceeded",
+  "message": "Daily connection request limit reached for account",
+  "retryAfterSeconds": 3600
+}
+```
+
+Common status codes:
+- `200`: Success
+- `202`: Accepted (async processing)
+- `400`: Bad request (invalid payload)
+- `401`: Unauthorized (invalid API key)
+- `429`: Rate limit exceeded
+- `500`: Internal server error
+

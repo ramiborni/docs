@@ -1,0 +1,88 @@
+---
+title: "LinkedIn Connection Accepted Webhook (Proposed)"
+api: "POST /webhooks/linkedin/account-accepted"
+description: "Proposed webhook payload emitted when a LinkedIn connection invitation is accepted"
+tags:
+  - webhooks
+  - accounts
+  - proposed
+---
+
+Receive events when a previously invited LinkedIn contact accepts a connection request managed by SendPilot.
+
+<Info>
+This webhook is **proposed**. Field names, payload structure, and event lifecycle may change prior to launch.
+</Info>
+
+## Proposed Webhook Event
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for the webhook delivery. Use this for idempotency checks.
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Always `connection.accepted` for this webhook.
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot detected the acceptance.
+</ParamField>
+
+<ParamField body="accountId" type="string" required>
+  SendPilot-managed LinkedIn account that sent the original invitation.
+</ParamField>
+
+<ParamField body="connection" type="object" required>
+  Details about the newly connected LinkedIn member.
+  
+  <Expandable title="Connection object">
+    <ParamField body="profileId" type="string" required>
+      LinkedIn profile identifier for the new connection.
+    </ParamField>
+    
+    <ParamField body="name" type="string" required>
+      Display name of the new connection.
+    </ParamField>
+    
+    <ParamField body="profileUrl" type="string">
+      Public LinkedIn profile URL.
+    </ParamField>
+    
+    <ParamField body="profileImageUrl" type="string">
+      Profile image URL if available.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Proposed Webhook Payload Example
+
+```json
+{
+  "eventId": "evt_01j0accept123",
+  "eventType": "connection.accepted",
+  "timestamp": "2025-01-05T11:15:32Z",
+  "accountId": "acc_sendpilot_001",
+  "connection": {
+    "profileId": "urn:li:member:987654321",
+    "name": "Jamie Rivers",
+    "profileUrl": "https://www.linkedin.com/in/jamie-rivers/",
+    "profileImageUrl": "https://media.licdn.com/dms/image/D4D35AQHBcL0QXkQZ1g/profile-displayphoto-shrink_400_400/0/1705000000000"
+  }
+}
+```
+
+## Handling the Webhook
+
+1. **Verify signature** with the `X-SendPilot-Signature` header, mirroring other SendPilot webhooks.
+2. **Enforce idempotency** using `eventId` before persisting the new connection.
+3. **Update CRM or ATS records** to reflect the newly connected relationship.
+4. **Trigger onboarding workflows** for the member if your automation requires next steps.
+
+<Warning>
+Acknowledge receipt with `200 OK` after queuing the event for processing. Respond with `5xx` only when you need SendPilot to retry delivery.
+</Warning>
+
+## See Also
+
+- [Send Connection Request](/api-reference/endpoint/post-connection-request) — Initiate invitations via API
+- [LinkedIn Account Status Webhook (Proposed)](/api-reference/endpoint/post-webhooks-linkedin-account-status) — Monitor account connectivity changes

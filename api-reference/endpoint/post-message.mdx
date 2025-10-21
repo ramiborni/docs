@@ -1,0 +1,114 @@
+---
+title: "Send Message"
+api: "POST /message"
+description: "Start or continue a conversation through a managed account in the SendPilot pool"
+---
+
+Send a message through a connected account managed by SendPilot. The endpoint supports plain text, HTML-enhanced copy, file attachments, and rich media for supported channels.
+
+## Request Body
+
+<ParamField body="accountId" type="string" required>
+  LinkedIn-provided account identifier. Must contain at least one character.
+</ParamField>
+
+<ParamField body="text" type="string">
+  Body of the outbound message. Supports LinkedIn Recruiter-safe HTML tags: `<strong>`, `<em>`, `<a href="https://www.example.com">`, `<ul>`, `<ol>`, and `<li>`. Tags can be nested as needed.
+</ParamField>
+
+<ParamField body="attachments" type="array<FileUpload>">
+  Collection of files to send alongside the message. Use for documents, images, or other supported media.
+</ParamField>
+
+<ParamField body="voiceMessage" type="FileUpload">
+  (WhatsApp & LinkedIn) Audio file to transmit as a voice note. LinkedIn works best with `.m4a` format. For Instagram and Telegram voice content, use the `attachments` collection.
+</ParamField>
+
+<ParamField body="videoMessage" type="FileUpload">
+  (LinkedIn) Video file to deliver as a rich media message.
+</ParamField>
+
+<ParamField body="leadUrl" type="string">
+  URL for the lead the message targets. Typically a LinkedIn profile link.
+</ParamField>
+
+## Response
+
+<ResponseField name="action" type="string">
+  Returns `message_sent` when the request is accepted for processing.
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST https://api.sendpilot.example.com/message \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "accountId": "acc_li_789",
+    "leadUrl": "https://www.linkedin.com/in/alex-example/",
+    "text": "<strong>Hi Alex</strong>, we'd love to chat about a Staff Engineer role at SendPilot.",
+    "attachments": [
+      {
+        "fileId": "file_cv_123",
+        "filename": "SendPilot_Opportunity.pdf"
+      }
+    ]
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "action": "message_sent"
+}
+```
+
+## Message Delivery
+
+Messages are delivered asynchronously. A `201` status confirms the message was accepted by SendPilot for dispatch; final delivery is confirmed via webhooks or polling message history.
+
+<Info>
+Use the [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) to capture replies and delivery updates, including metadata about attendees and attachments.
+</Info>
+
+## Best Practices
+
+<Tip>
+  **Maintain context**: Always use `conversationId` when available to ensure message continuity and proper threading.
+</Tip>
+
+- Combine `text` and `attachments` to deliver richer outreach while respecting channel limits
+- Keep HTML markup minimal; LinkedIn strips unsupported tags
+- Prefer `.m4a` files for LinkedIn voice notes to avoid transcoding issues
+- Validate `leadUrl` before submission to prevent malformed request errors
+- Ensure attachments comply with platform size and type restrictions
+
+## Conversation Context
+
+**New conversations**: Provide `text`, rich media, or attachments alongside `leadUrl` to initiate outreach. SendPilot handles thread creation and returns identifiers via webhook events.
+
+**Existing conversations**: Include the `leadUrl` associated with the active conversation to maintain continuity across follow-ups.
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 201 | `action: message_sent` | Message accepted for processing |
+| 400 | `errors/invalid_parameters`, `errors/malformed_request`, `errors/content_too_large`, `errors/invalid_url`, `errors/too_many_characters`, `errors/unescaped_characters`, `errors/missing_parameters` | Payload validation failed |
+| 401 | `errors/missing_credentials`, `errors/multiple_sessions`, `errors/invalid_checkpoint_solution`, `errors/invalid_proxy_credentials`, `errors/checkpoint_error`, `errors/invalid_credentials`, `errors/expired_credentials`, `errors/insufficient_privileges`, `errors/disconnected_account`, `errors/disconnected_feature`, `errors/invalid_credentials_but_valid_account_imap`, `errors/expired_link`, `errors/wrong_account`, `errors/captcha_not_supported` | Authentication or session problem preventing delivery |
+| 404 | `errors/resource_not_found`, `errors/invalid_resource_identifier` | Conversation, account, or lead reference could not be resolved |
+| 415 | `errors/unsupported_media_type` | Attachment or media format is not supported |
+| 422 | `errors/invalid_account`, `errors/invalid_recipient`, `errors/no_connection_with_recipient`, `errors/blocked_recipient`, `errors/user_unreachable`, `errors/unprocessable_entity`, `errors/action_already_performed`, `errors/invalid_message`, `errors/invalid_post`, `errors/not_allowed_inmail`, `errors/insufficient_credits`, `errors/cannot_resend_yet`, `errors/cannot_resend_within_24hrs`, `errors/limit_exceeded`, `errors/already_invited_recently`, `errors/already_connected`, `errors/cannot_invite_attendee`, `errors/parent_mail_not_found`, `errors/invalid_reply_subject`, `errors/invalid_headers`, `errors/send_as_denied`, `errors/invalid_folder`, `errors/invalid_thread`, `errors/limit_too_high`, `errors/unauthorized`, `errors/sender_rejected`, `errors/recipient_rejected`, `errors/ip_rejected_by_server`, `errors/provider_unreachable`, `errors/account_configuration_error`, `errors/cant_send_message`, `errors/realtime_client_not_initialized`, `errors/comments_disabled`, `errors/insufficient_job_slot` | Request could not be processed due to account, recipient, or platform constraints |
+| 429 | `errors/too_many_requests` | Request throttled by rate limits |
+| 500 | `errors/unexpected_error`, `errors/provider_error`, `errors/authentication_intent_error` | Internal or upstream provider failure |
+| 503 | `errors/no_client_session`, `errors/no_channel`, `errors/no_handler`, `errors/network_down`, `errors/service_unavailable` | Temporary infrastructure outage |
+| 504 | `errors/request_timeout` | Provider did not respond before timeout |
+
+## See Also
+
+- [Get Messages](/api-reference/endpoint/get-messages) - Poll for message history
+- [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) - Receive inbound messages with conversation context
+- [Account Pools](/operations/account-pools) - Understand account routing
+

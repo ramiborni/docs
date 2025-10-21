@@ -1,0 +1,65 @@
+---
+title: "LinkedIn Account Status Webhook (Proposed)"
+api: "POST /webhooks/linkedin/account-status"
+description: "Proposed webhook payload describing LinkedIn account connectivity updates"
+tags:
+  - webhooks
+  - accounts
+  - proposed
+---
+
+Receive proactive notifications whenever SendPilot detects a change in a managed LinkedIn account's status or connectivity state.
+
+<Info>
+This webhook is **proposed**. Field names, event types, and structures may change before general availability.
+</Info>
+
+## Proposed Webhook Event
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for this webhook delivery. Use for idempotency protection.
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Always `account.status_changed` for this webhook.
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot detected the account state change.
+</ParamField>
+
+<ParamField body="accountId" type="string" required>
+  Unique identifier for the SendPilot-managed account.
+</ParamField>
+
+<ParamField body="status" type="string" required>
+  Current account state. Values: `ACTIVE`, `DISCONNECTED`, `DELETED`.
+</ParamField>
+
+## Proposed Webhook Payload Example
+
+```json
+{
+  "eventId": "evt_01j0status123",
+  "eventType": "account.status_changed",
+  "timestamp": "2025-01-05T10:00:00Z",
+  "accountId": "acc_sendpilot_001",
+  "status": "DISCONNECTED"
+}
+```
+
+## Handling the Webhook
+
+1. **Verify signatures** using the `X-SendPilot-Signature` header, identical to other SendPilot webhooks.
+2. **Check idempotency** with `eventId` (or your preferred unique key) before persisting the update.
+3. **Update internal records** so downstream systems see the new account status.
+4. **Trigger remediation flows** when `status` indicates the account requires attention.
+
+<Warning>
+Respond with `200 OK` once the event is accepted for processing. Return `5xx` only when you require SendPilot to retry delivery.
+</Warning>
+
+## See Also
+
+- [Get Account Status](/api-reference/endpoint/get-account-status) — Pull the latest account snapshot on demand
+- [Message Received Webhook (Proposed)](/api-reference/endpoint/post-webhooks-message-received) — Track inbound candidate replies

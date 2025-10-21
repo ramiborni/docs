@@ -1,0 +1,37 @@
+---
+title: "Rate Limits"
+description: "Understanding per-account quotas and safe throttling practices"
+---
+
+## Transparency Requirements
+
+- SendPilot must expose per-account rate limits and remaining quotas via `GET /account-status`.
+- Metrics should include daily caps for connection requests and messages, plus real-time remaining counts.
+- Any LinkedIn-imposed warnings or pending cooldowns should be surfaced promptly.
+
+## Daily Quotas
+
+| Activity | Daily Limit | Notes |
+| --- | --- | --- |
+| Connection requests | Premium: 25/day | Supports notes up to 300 characters |
+|  | Free or fresh: 2/day | Includes a 200-character note |
+|  | Free or fresh: 20/day | When sending without a note |
+| Retrieve profile | 100/day | Applies per connected LinkedIn account |
+| Messages | 80/day | Includes follow-ups |
+
+SendPilot enforces these ceilings so each connected LinkedIn account runs inside a safe automation envelope. The platform automatically paces outreach, profile lookups, and messaging to respect LinkedIn's trust signals while keeping delivery consistent.
+
+> **Warning:** If a LinkedIn account exceeds these limits through other automation tools, manual activity in the LinkedIn app, or the web experience, SendPilot cannot raise or reset the caps retrospectively. The dashboard only reflects the usage SendPilot tracks directly, so external overages may still trigger LinkedIn enforcement.
+
+## Staffer Responsibilities
+
+- Poll `GET /account-status` regularly to monitor usage trends.
+- Implement throttling logic to keep within disclosed limits, adjusting pacing by account.
+- React to warning states by shifting volume to healthier accounts or pausing outreach.
+
+## SendPilot Safeguards
+
+- Continue enforcing internal guardrails (session rotation, IP management, anti-detection heuristics) to protect account integrity.
+- Provide meaningful error codes (e.g., `429`) when limits are hit, enabling Staffer to back off.
+
+

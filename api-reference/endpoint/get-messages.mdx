@@ -1,0 +1,94 @@
+---
+title: "Get Messages"
+api: "GET /messages"
+description: "Retrieve recent messages for reconciliation or webhook fallback scenarios"
+---
+
+Poll for recent LinkedIn messages across conversations. This endpoint is primarily used for:
+- **Reconciliation**: Verify webhook delivery
+- **Fallback**: Retrieve messages if webhooks are temporarily unavailable
+- **Historical data**: Fetch conversation history
+
+<Warning>
+This endpoint is intended for occasional polling, not real-time message retrieval. Use webhooks for real-time message notifications.
+</Warning>
+
+## Query Parameters
+
+<ParamField query="accountId" type="string" required>
+  SendPilot-managed account identifier to poll for messages.
+</ParamField>
+
+<ParamField query="limit" type="integer" required>
+  Maximum number of messages to return for the current page.
+</ParamField>
+
+## Response
+
+<ResponseField name="messages" type="array">
+  Page of messages returned for the specified account.
+  
+  <Expandable title="Message object">
+    <ResponseField name="messageId" type="string">
+      Unique message identifier
+    </ResponseField>
+    
+    <ResponseField name="isProvidedLinkedinAccount" type="boolean">
+      Indicates whether the message originated from a SendPilot-provided LinkedIn account.
+    </ResponseField>
+    
+    <ResponseField name="text" type="string">
+      Message content
+    </ResponseField>
+    
+    <ResponseField name="sentAt" type="string">
+      ISO-8601 timestamp when message was sent
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+<ResponseField name="page" type="integer">
+  Current page index returned in the response. Starts at 0.
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET "https://api.sendpilot.example.com/messages?accountId=acc_sendpilot_001&limit=50" \
+  -H "X-API-KEY: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "messages": [
+    {
+      "messageId": "msg_01hxabc123",
+      "isProvidedLinkedinAccount": true,
+      "text": "Thanks for reaching out! I'd be interested in learning more.",
+      "sentAt": "2025-10-15T14:23:10Z"
+    },
+    {
+      "messageId": "msg_01hxdef456",
+      "isProvidedLinkedinAccount": false,
+      "text": "Great! When would be a good time to chat?",
+      "sentAt": "2025-10-15T14:25:33Z"
+    }
+  ],
+  "page": 0
+}
+```
+
+## Error Responses
+
+### 404 Not Found
+
+Returned when no messages are available for the supplied account:
+
+```json
+{
+  "messages": []
+}
+```
+
