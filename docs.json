@@ -42,6 +42,9 @@
       {
         "group": "Webhooks",
         "pages": [
+          "api-reference/endpoint/post-webhooks-register",
+          "api-reference/endpoint/delete-webhooks-unregister",
+          "api-reference/endpoint/get-webhooks-list",
           "api-reference/endpoint/post-webhooks-message-received",
           "api-reference/endpoint/post-webhooks-linkedin-account-status",
           "api-reference/endpoint/post-webhooks-linkedin-account-accepted"

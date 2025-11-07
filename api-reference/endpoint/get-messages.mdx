@@ -102,10 +102,8 @@ This endpoint is intended for occasional polling, not real-time message retrieva
 ## Example Request
 
 ```bash
-curl -X GET "https://api.sendpilot.example.com/messaging/messages?linkedinAccountId=clxxx123456&limit=50" \
-  -H "x-user-id: YOUR_USER_ID" \
-  -H "x-project-id: YOUR_PROJECT_ID" \
-  -H "x-environment: production"
+curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/messages?linkedinAccountId=clxxx123456&limit=50" \
+  -H "X-API-KEY: YOUR_API_KEY" \
 ```
 
 ## Example Response

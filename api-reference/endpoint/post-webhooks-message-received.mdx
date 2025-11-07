@@ -1,6 +1,5 @@
 ---
 title: "Message Received Webhook"
-api: "POST /webhooks/message-received"
 description: "Webhook payload invoked when a LinkedIn message arrives"
 tags:
   - webhooks
@@ -238,12 +237,10 @@ async function processInboundMessage(event) {
   const aiResponse = await generateResponse(data.textContent, context);
   
   // 3. Send response via SendPilot
-  await fetch('https://api.sendpilot.example.com/messaging/message', {
+  await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message', {
     method: 'POST',
     headers: {
-      'x-user-id': YOUR_USER_ID,
-      'x-project-id': YOUR_PROJECT_ID,
-      'x-environment': 'production',
+      'X-API-KEY': YOUR_API_KEY,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({

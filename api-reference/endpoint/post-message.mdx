@@ -59,10 +59,8 @@ Send a message through a connected account managed by SendPilot. The endpoint su
 ### Text Message
 
 ```bash
-curl -X POST https://api.sendpilot.example.com/messaging/message \
-  -H "x-user-id: YOUR_USER_ID" \
-  -H "x-project-id: YOUR_PROJECT_ID" \
-  -H "x-environment: production" \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message \
+  -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "linkedinAccountId": "clxxx123456",
@@ -74,10 +72,8 @@ curl -X POST https://api.sendpilot.example.com/messaging/message \
 ### Message with Attachments
 
 ```bash
-curl -X POST https://api.sendpilot.example.com/messaging/message \
-  -H "x-user-id: YOUR_USER_ID" \
-  -H "x-project-id: YOUR_PROJECT_ID" \
-  -H "x-environment: production" \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message \
+  -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "linkedinAccountId": "clxxx123456",
@@ -95,10 +91,8 @@ curl -X POST https://api.sendpilot.example.com/messaging/message \
 ### Voice Message
 
 ```bash
-curl -X POST https://api.sendpilot.example.com/messaging/message \
-  -H "x-user-id: YOUR_USER_ID" \
-  -H "x-project-id: YOUR_PROJECT_ID" \
-  -H "x-environment: production" \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message \
+  -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
     "linkedinAccountId": "clxxx123456",
@@ -172,12 +166,10 @@ Video files delivered as rich media messages on LinkedIn.
 
 ```javascript
 async function sendMessage(linkedinAccountId, leadUrl, messageText) {
-  const response = await fetch('https://api.sendpilot.example.com/messaging/message', {
+  const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message', {
     method: 'POST',
     headers: {
-      'x-user-id': YOUR_USER_ID,
-      'x-project-id': YOUR_PROJECT_ID,
-      'x-environment': 'production',
+      'X-API-KEY': YOUR_API_KEY,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({

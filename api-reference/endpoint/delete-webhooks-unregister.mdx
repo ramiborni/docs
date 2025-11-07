@@ -1,0 +1,171 @@
+---
+title: "Unregister Webhook"
+api: "DELETE /webhooks/unregister"
+description: "Remove a webhook URL from receiving event notifications"
+---
+
+Remove a webhook URL from receiving event notifications. Webhooks are account-based (per user) and support both Clerk authentication (Bearer token) and API Key authentication.
+
+## Request Body
+
+<ParamField body="url" type="string" required>
+  Webhook URL to unregister. Must match a previously registered webhook URL.
+  
+  Example: `https://your-app.com/webhooks/sendpilot`
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="environment" type="string">
+  Environment (sandbox or production). Use different API keys for different environments.
+  
+  Values: `sandbox` | `production`
+</ParamField>
+
+## Response
+
+<ResponseField name="status" type="string">
+  Status of webhook unregistration. Returns `unregistered` on success.
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X DELETE https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/unregister \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-app.com/webhooks/sendpilot"
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "status": "unregistered"
+}
+```
+
+## Use Cases
+
+### Temporary Webhook Disabling
+
+```javascript
+// Disable webhook during maintenance
+async function disableWebhookDuringMaintenance() {
+  const webhookUrl = 'https://your-app.com/webhooks/sendpilot';
+  
+  // Unregister webhook
+  await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/unregister', {
+    method: 'DELETE',
+    headers: {
+      'X-API-KEY': YOUR_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ url: webhookUrl })
+  });
+  
+  console.log('Webhook disabled for maintenance');
+}
+```
+
+### Removing Deprecated Endpoints
+
+```javascript
+// Remove old webhook URL when migrating to new infrastructure
+async function migrateWebhook() {
+  const oldWebhook = 'https://old-api.your-app.com/webhooks';
+  const newWebhook = 'https://new-api.your-app.com/webhooks';
+  
+  // Unregister old webhook
+  await unregisterWebhook(oldWebhook);
+  
+  // Register new webhook
+  await registerWebhook({
+    url: newWebhook,
+    secret: 'new_secret',
+    events: ['MESSAGE_RECEIVED', 'CONNECTION_ACCEPTED']
+  });
+}
+```
+
+## Best Practices
+
+<Tip>
+Before unregistering a webhook, ensure no critical processes depend on the events it receives.
+</Tip>
+
+- **Verify URL**: Ensure the URL matches exactly, including protocol (https://)
+- **Check dependencies**: Audit systems that may rely on webhook events before removal
+- **Update documentation**: Document webhook changes in your internal systems
+- **Test in sandbox**: Test webhook removal in sandbox environment first
+- **Monitor impact**: Watch for any downstream effects after unregistering
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | Success | Webhook unregistered successfully |
+| 400 | `Invalid request data` | URL format is invalid or missing |
+| 401 | `Invalid or missing authentication` | Authentication headers are missing or invalid |
+| 404 | Webhook not found | No webhook exists with the provided URL |
+
+## Webhook Lifecycle
+
+1. **Register**: Use [Register Webhook](/api-reference/endpoint/post-webhooks-register) to create
+2. **Monitor**: Receive events at your registered endpoint
+3. **List**: Use [List Webhooks](/api-reference/endpoint/get-webhooks-list) to view active webhooks
+4. **Unregister**: Use this endpoint to remove when no longer needed
+
+## Safety Considerations
+
+<Warning>
+Unregistering a webhook is immediate. All pending events will be lost. Consider implementing a queue or buffer if you need graceful shutdown.
+</Warning>
+
+### Graceful Webhook Removal
+
+```javascript
+async function gracefulWebhookRemoval(webhookUrl) {
+  // 1. Stop new events from triggering actions
+  await disableWebhookProcessing(webhookUrl);
+  
+  // 2. Process any queued events
+  await processRemainingEvents();
+  
+  // 3. Unregister webhook
+  await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/unregister', {
+    method: 'DELETE',
+    headers: {
+      'X-API-KEY': YOUR_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ url: webhookUrl })
+  });
+  
+  console.log('Webhook removed gracefully');
+}
+```
+
+## Environment Considerations
+
+When using environment-specific webhooks:
+
+```javascript
+// Unregister sandbox webhook
+await unregisterWebhook({
+  url: 'https://staging.your-app.com/webhooks',
+  environment: 'sandbox'
+});
+
+// Production webhook remains active
+// 'https://your-app.com/webhooks' continues receiving events
+```
+
+## See Also
+
+- [Register Webhook](/api-reference/endpoint/post-webhooks-register) - Add a new webhook URL
+- [List Webhooks](/api-reference/endpoint/get-webhooks-list) - View all registered webhooks
+- [Webhook Events](/api-reference/endpoint/post-webhooks-message-received) - Available webhook events
+

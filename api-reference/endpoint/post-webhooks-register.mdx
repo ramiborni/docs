@@ -1,0 +1,189 @@
+---
+title: "Register Webhook"
+api: "POST /webhooks/register"
+description: "Register a webhook URL to receive event notifications from SendPilot"
+---
+
+Register a webhook URL to receive real-time event notifications from SendPilot. Webhooks are account-based (per user) and support both Clerk authentication (Bearer token) and API Key authentication.
+
+## Request Body
+
+<ParamField body="url" type="string" required>
+  Webhook URL to receive events. Must be a valid HTTPS endpoint.
+  
+  Example: `https://your-app.com/webhooks/sendpilot`
+</ParamField>
+
+<ParamField body="secret" type="string">
+  Webhook secret for signature verification. Used to sign webhook payloads for security.
+  
+  Example: `your_webhook_secret_123`
+</ParamField>
+
+<ParamField body="events" type="array<string>" required>
+  List of event types to subscribe to. Accepts both formats: UPPERCASE_UNDERSCORE (MESSAGE_RECEIVED) or lowercase.dot (message.received). Use `*` for all events.
+  
+  Available events:
+  - `MESSAGE_RECEIVED` or `message.received` - Inbound LinkedIn messages
+  - `CONNECTION_ACCEPTED` or `connection.accepted` - Connection requests accepted
+  - `ACCOUNT_DISCONNECTED` or `account.disconnected` - Account status changes
+  - `*` - Subscribe to all events
+  
+  Example: `["MESSAGE_RECEIVED", "CONNECTION_ACCEPTED", "ACCOUNT_DISCONNECTED"]`
+</ParamField>
+
+## Query Parameters
+
+<ParamField query="environment" type="string">
+  Environment (sandbox or production). Use different API keys for different environments.
+  
+  Values: `sandbox` | `production`
+</ParamField>
+
+## Response
+
+<ResponseField name="status" type="string">
+  Status of webhook registration. Returns `registered` on success.
+</ResponseField>
+
+<ResponseField name="url" type="string">
+  Registered webhook URL that will receive events.
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/register \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "url": "https://your-app.com/webhooks/sendpilot",
+    "secret": "your_webhook_secret_123",
+    "events": ["MESSAGE_RECEIVED", "CONNECTION_ACCEPTED", "ACCOUNT_DISCONNECTED"]
+  }'
+```
+
+## Example Response
+
+```json
+{
+  "status": "registered",
+  "url": "https://your-app.com/webhooks/sendpilot"
+}
+```
+
+## Event Types
+
+### MESSAGE_RECEIVED
+Triggered when a LinkedIn message is received in response to a sent message. See [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) for payload details.
+
+### CONNECTION_ACCEPTED
+Triggered when a LinkedIn connection request is accepted. See [Connection Accepted Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-accepted) for payload details.
+
+### ACCOUNT_DISCONNECTED
+Triggered when a LinkedIn account is disconnected or experiences a status change. See [Account Disconnected Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-status) for payload details.
+
+## Webhook Security
+
+<Warning>
+Always implement signature verification using the provided webhook secret to ensure requests are from SendPilot.
+</Warning>
+
+### Signature Verification Example
+
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhookSignature(payload, signature, secret) {
+  const parts = signature.split(',');
+  const timestamp = parts[0].split('=')[1];
+  const signatureHash = parts[1].split('=')[1];
+  
+  // Prevent replay attacks - reject old timestamps
+  const age = Date.now() / 1000 - parseInt(timestamp);
+  if (age > 300) { // 5 minutes
+    return false;
+  }
+  
+  const signedPayload = `${timestamp}.${JSON.stringify(payload)}`;
+  const expectedHash = crypto
+    .createHmac('sha256', secret)
+    .update(signedPayload)
+    .digest('hex');
+  
+  return crypto.timingSafeEqual(
+    Buffer.from(expectedHash),
+    Buffer.from(signatureHash)
+  );
+}
+
+// In your webhook handler
+app.post('/webhooks/sendpilot', (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  if (!verifyWebhookSignature(req.body, signature, 'your_webhook_secret_123')) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  // Process webhook...
+  res.status(200).json({ received: true });
+});
+```
+
+## Best Practices
+
+<Tip>
+Subscribe only to events you need. Using `*` for all events may result in unnecessary webhook traffic.
+</Tip>
+
+- **Use HTTPS**: Webhook endpoints must use TLS/SSL encryption
+- **Verify signatures**: Always validate the `X-SendPilot-Signature` header
+- **Implement idempotency**: Use the `eventId` field to prevent duplicate processing
+- **Respond quickly**: Return `200 OK` within 5 seconds to acknowledge receipt
+- **Process asynchronously**: Queue webhook events for background processing
+- **Handle retries**: SendPilot will retry failed deliveries with exponential backoff
+
+## Webhook Requirements
+
+Your webhook endpoint must:
+
+1. Accept POST requests with JSON payloads
+2. Return `200 OK` status within 5 seconds
+3. Use HTTPS (TLS/SSL)
+4. Verify webhook signatures for security
+5. Respond with `{ "received": true }` to acknowledge receipt
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | Success | Webhook registered successfully |
+| 400 | `Invalid request data` | URL is invalid or events array is empty |
+| 401 | `Invalid or missing authentication` | Authentication headers are missing or invalid |
+
+## Multiple Webhooks
+
+You can register multiple webhook URLs for different purposes:
+
+```javascript
+// Register webhook for production
+await registerWebhook({
+  url: 'https://your-app.com/webhooks/production',
+  secret: 'prod_secret',
+  events: ['MESSAGE_RECEIVED']
+});
+
+// Register webhook for analytics
+await registerWebhook({
+  url: 'https://analytics.your-app.com/webhooks',
+  secret: 'analytics_secret',
+  events: ['*']
+});
+```
+
+## See Also
+
+- [Unregister Webhook](/api-reference/endpoint/delete-webhooks-unregister) - Remove a webhook URL
+- [List Webhooks](/api-reference/endpoint/get-webhooks-list) - View registered webhooks
+- [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) - Webhook payload reference
+

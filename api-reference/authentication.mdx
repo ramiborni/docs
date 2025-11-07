@@ -8,12 +8,13 @@ description: "Secure your API requests with authentication"
 All requests to the SendPilot API must be authenticated using an API key. Include your API key in the `X-API-KEY` header of every request:
 
 ```bash
-curl https://api.sendpilot.example.com/connection-request \
+curl https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/connection-request \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "targetProfileId": "urn:li:member:123456789",
-    "message": "Hi, I'd love to connect!"
+    "leadUrl": "https://www.linkedin.com/in/john-doe",
+    "linkedinAccountId": "clxxx123456",
+    "connectionNote": "Hi, I'\''d love to connect!"
   }'
 ```
 
@@ -53,15 +54,16 @@ SENDPILOT_API_KEY=sp_live_abc123xyz...
 // Node.js example
 const apiKey = process.env.SENDPILOT_API_KEY;
 
-const response = await fetch('https://api.sendpilot.example.com/message', {
+const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message', {
   method: 'POST',
   headers: {
     'X-API-KEY': apiKey,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
-    conversationId: 'conv_01hx123',
-    message: 'Thanks for connecting!'
+    linkedinAccountId: 'clxxx123456',
+    leadUrl: 'https://www.linkedin.com/in/john-doe',
+    text: 'Thanks for connecting!'
   })
 });
 ```
@@ -160,26 +162,26 @@ If you suspect your API key has been compromised:
 
 Use different API keys for each environment to isolate concerns:
 
-| Environment | Key Format | Base URL |
-|------------|-----------|----------|
-| Staging | `sp_test_...` | `https://staging-api.sendpilot.example.com` |
-| Production | `sp_live_...` | `https://api.sendpilot.example.com` |
+| Environment | Key Format | Description |
+|------------|-----------|-------------|
+| Sandbox | Separate sandbox key | For development and testing |
+| Production | Production key | For live integration |
 
 Configure your application to select the appropriate key based on the environment:
 
 ```javascript
 const config = {
-  staging: {
-    apiKey: process.env.SENDPILOT_STAGING_KEY,
-    baseUrl: 'https://staging-api.sendpilot.example.com'
+  sandbox: {
+    apiKey: process.env.SENDPILOT_SANDBOX_KEY,
+    baseUrl: 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account'
   },
   production: {
     apiKey: process.env.SENDPILOT_PRODUCTION_KEY,
-    baseUrl: 'https://api.sendpilot.example.com'
+    baseUrl: 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account'
   }
 };
 
-const env = process.env.NODE_ENV || 'staging';
+const env = process.env.NODE_ENV || 'sandbox';
 const { apiKey, baseUrl } = config[env];
 ```
 

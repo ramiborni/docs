@@ -1,0 +1,251 @@
+---
+title: "List Webhooks"
+api: "GET /webhooks/list"
+description: "Get all registered webhook URLs for your account"
+---
+
+Retrieve all registered webhook URLs for your account. Webhooks are account-based (per user) and support both Clerk authentication (Bearer token) and API Key authentication.
+
+## Query Parameters
+
+<ParamField query="environment" type="string">
+  Environment (sandbox or production). Use different API keys for different environments.
+  
+  Values: `sandbox` | `production`
+</ParamField>
+
+## Response
+
+<ResponseField name="webhooks" type="array<object>">
+  List of registered webhooks with their configuration details.
+  
+  <Expandable title="Webhook object">
+    <ResponseField name="url" type="string">
+      Registered webhook URL
+    </ResponseField>
+    
+    <ResponseField name="events" type="array<string>">
+      Subscribed event types
+    </ResponseField>
+    
+    <ResponseField name="createdAt" type="string">
+      ISO-8601 timestamp when webhook was registered
+    </ResponseField>
+    
+    <ResponseField name="status" type="string">
+      Webhook status (active, inactive, failed)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/list \
+  -H "X-API-KEY: YOUR_API_KEY" \
+```
+
+## Example Response
+
+```json
+{
+  "webhooks": [
+    {
+      "url": "https://your-app.com/webhooks/sendpilot",
+      "events": ["MESSAGE_RECEIVED", "CONNECTION_ACCEPTED"],
+      "createdAt": "2025-11-01T10:00:00.000Z",
+      "status": "active"
+    },
+    {
+      "url": "https://analytics.your-app.com/webhooks",
+      "events": ["*"],
+      "createdAt": "2025-11-05T14:30:00.000Z",
+      "status": "active"
+    }
+  ]
+}
+```
+
+## Use Cases
+
+### Webhook Audit
+
+```javascript
+async function auditWebhooks() {
+  const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/list', {
+    method: 'GET',
+    headers: {
+      'X-API-KEY': YOUR_API_KEY
+    }
+  });
+  
+  const { webhooks } = await response.json();
+  
+  console.log(`Total webhooks: ${webhooks.length}`);
+  
+  webhooks.forEach(webhook => {
+    console.log(`URL: ${webhook.url}`);
+    console.log(`Events: ${webhook.events.join(', ')}`);
+    console.log(`Status: ${webhook.status}`);
+    console.log('---');
+  });
+}
+```
+
+### Health Monitoring
+
+```javascript
+async function monitorWebhookHealth() {
+  const { webhooks } = await listWebhooks();
+  
+  const failedWebhooks = webhooks.filter(w => w.status === 'failed');
+  
+  if (failedWebhooks.length > 0) {
+    console.warn(`⚠️ ${failedWebhooks.length} webhooks are failing`);
+    
+    failedWebhooks.forEach(webhook => {
+      // Alert team
+      sendAlert({
+        type: 'webhook_failure',
+        url: webhook.url,
+        events: webhook.events
+      });
+    });
+  }
+}
+```
+
+### Configuration Validation
+
+```javascript
+async function validateWebhookConfig() {
+  const { webhooks } = await listWebhooks();
+  
+  // Ensure critical events are covered
+  const criticalEvents = ['MESSAGE_RECEIVED', 'ACCOUNT_DISCONNECTED'];
+  const subscribedEvents = new Set();
+  
+  webhooks.forEach(webhook => {
+    webhook.events.forEach(event => {
+      if (event === '*' || criticalEvents.includes(event)) {
+        subscribedEvents.add(event === '*' ? 'all' : event);
+      }
+    });
+  });
+  
+  const missingEvents = criticalEvents.filter(e => 
+    !subscribedEvents.has(e) && !subscribedEvents.has('all')
+  );
+  
+  if (missingEvents.length > 0) {
+    console.warn(`Missing critical events: ${missingEvents.join(', ')}`);
+  } else {
+    console.log('✓ All critical events are covered');
+  }
+}
+```
+
+## Webhook Status
+
+### Active
+Webhook is receiving events normally and responding with `200 OK`.
+
+### Inactive
+Webhook was manually disabled or unregistered.
+
+### Failed
+Webhook is experiencing delivery failures. Common causes:
+- Endpoint returning 5xx errors repeatedly
+- Timeout exceeding 5 seconds
+- TLS/SSL certificate issues
+- DNS resolution failures
+
+## Best Practices
+
+<Tip>
+Regularly audit your webhooks to ensure they're active and properly configured. Remove unused webhooks to reduce unnecessary traffic.
+</Tip>
+
+- **Regular audits**: Check webhook list weekly to identify and remove unused endpoints
+- **Monitor status**: Alert on webhooks that enter `failed` status
+- **Document purpose**: Maintain internal documentation for each webhook URL's purpose
+- **Validate events**: Ensure critical events are subscribed to
+- **Environment separation**: Keep sandbox and production webhooks separate
+- **Security review**: Periodically verify webhook URLs are using HTTPS
+
+## Filtering by Environment
+
+```javascript
+// List production webhooks
+const prodWebhooks = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/list', {
+  headers: {
+    'X-API-KEY': YOUR_API_KEY
+
+
+  }
+});
+
+// List sandbox webhooks
+const sandboxWebhooks = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/list', {
+  headers: {
+    'X-API-KEY': YOUR_API_KEY
+
+
+  }
+});
+```
+
+## Webhook Management Dashboard
+
+Build a simple dashboard to manage webhooks:
+
+```javascript
+async function webhookDashboard() {
+  const { webhooks } = await listWebhooks();
+  
+  return {
+    total: webhooks.length,
+    active: webhooks.filter(w => w.status === 'active').length,
+    failed: webhooks.filter(w => w.status === 'failed').length,
+    byEvent: {
+      messageReceived: webhooks.filter(w => 
+        w.events.includes('MESSAGE_RECEIVED') || w.events.includes('*')
+      ).length,
+      connectionAccepted: webhooks.filter(w => 
+        w.events.includes('CONNECTION_ACCEPTED') || w.events.includes('*')
+      ).length,
+      accountDisconnected: webhooks.filter(w => 
+        w.events.includes('ACCOUNT_DISCONNECTED') || w.events.includes('*')
+      ).length
+    },
+    endpoints: webhooks.map(w => ({
+      url: w.url,
+      status: w.status,
+      eventCount: w.events.length
+    }))
+  };
+}
+```
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | Success | Webhooks retrieved successfully |
+| 400 | `Invalid query parameters` | Environment parameter is invalid |
+| 401 | `Invalid or missing authentication` | Authentication headers are missing or invalid |
+
+## Webhook Limits
+
+<Info>
+There is no hard limit on the number of webhooks you can register, but we recommend keeping it under 10 per environment for optimal performance.
+</Info>
+
+## See Also
+
+- [Register Webhook](/api-reference/endpoint/post-webhooks-register) - Add a new webhook URL
+- [Unregister Webhook](/api-reference/endpoint/delete-webhooks-unregister) - Remove a webhook URL
+- [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) - Webhook payload reference
+- [Connection Accepted Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-accepted) - Connection event details
+- [Account Disconnected Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-status) - Account status events
+

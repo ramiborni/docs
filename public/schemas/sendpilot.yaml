@@ -4,7 +4,9 @@ info:
   description: SendPilot LinkedIn API integration with sandbox and production modes
   version: "1.0"
   contact: {}
-servers: []
+servers:
+  - url: https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account
+    description: Production and Sandbox server
 tags:
   - name: Messaging
     description: LinkedIn messaging and connection requests
@@ -21,9 +23,7 @@ paths:
       tags:
         - Messaging
       security:
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       requestBody:
         required: true
         description: Connection request details
@@ -50,9 +50,7 @@ paths:
       tags:
         - Messaging
       security:
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       requestBody:
         required: true
         description: Message details and content
@@ -79,9 +77,7 @@ paths:
       tags:
         - Messaging
       security:
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       parameters:
         - name: linkedinAccountId
           required: true
@@ -117,9 +113,7 @@ paths:
       tags:
         - Accounts
       security:
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       parameters:
         - name: linkedinAccountId
           required: true
@@ -147,9 +141,7 @@ paths:
       tags:
         - Accounts
       security:
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       requestBody:
         required: true
         description: Account logout details
@@ -176,9 +168,7 @@ paths:
       tags:
         - Accounts
       security:
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       requestBody:
         required: true
         description: LinkedIn connection details
@@ -205,9 +195,7 @@ paths:
       tags:
         - Accounts
       security:
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       requestBody:
         required: true
         description: LinkedIn reconnection details including account ID
@@ -236,10 +224,7 @@ paths:
       tags:
         - Webhooks
       security:
-        - bearer: []
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       parameters:
         - name: environment
           required: false
@@ -276,10 +261,7 @@ paths:
       tags:
         - Webhooks
       security:
-        - bearer: []
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       parameters:
         - name: environment
           required: false
@@ -316,10 +298,7 @@ paths:
       tags:
         - Webhooks
       security:
-        - bearer: []
-        - environment: []
-        - user-id: []
-        - project-id: []
+        - apiKey: []
       parameters:
         - name: environment
           required: false
@@ -343,25 +322,11 @@ paths:
           description: Invalid or missing authentication
 components:
   securitySchemes:
-    bearer:
-      type: http
-      scheme: bearer
-      description: Clerk authentication token
-    project-id:
+    apiKey:
       type: apiKey
       in: header
-      name: x-project-id
-      description: Project ID for your SendPilot project
-    user-id:
-      type: apiKey
-      in: header
-      name: x-user-id
-      description: User ID for authentication
-    environment:
-      type: apiKey
-      in: header
-      name: x-environment
-      description: Environment (use "sandbox" for testing, "production" for live)
+      name: X-API-KEY
+      description: API Key for authentication
   schemas:
     ConnectionRequestDto:
       type: object
