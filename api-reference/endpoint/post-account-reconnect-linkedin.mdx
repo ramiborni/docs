@@ -113,7 +113,7 @@ Refresh LinkedIn session cookies or credentials for an existing managed account.
 ## Example Request
 
 ```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/accounts/reconnect-linkedin \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/reconnect-linkedin \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -158,29 +158,24 @@ Use the reconnect endpoint when:
 Implement automatic reconnection for common scenarios:
 
 ```javascript
+const axios = require('axios');
+
 async function autoReconnect(linkedinAccountId, credentials) {
   try {
-    const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/accounts/reconnect-linkedin', {
-      method: 'POST',
+    const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/reconnect-linkedin';
+
+    const response = await axios.post(url, {
+      linkedinAccountId,
+      ...credentials
+    }, {
       headers: {
-        'X-API-KEY': YOUR_API_KEY
-  
-  
+        'X-API-KEY': "YOUR_API_KEY",
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        linkedinAccountId,
-        ...credentials
-      })
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`Reconnect failed: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    console.log('Account reconnected:', result.data.linkedinAccountId);
-    return result;
+    console.log('Account reconnected:', response.data.data.linkedinAccountId);
+    return response.data;
   } catch (error) {
     console.error('Auto-reconnect failed:', error);
     // Alert team for manual intervention

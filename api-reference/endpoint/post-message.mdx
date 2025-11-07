@@ -59,7 +59,7 @@ Send a message through a connected account managed by SendPilot. The endpoint su
 ### Text Message
 
 ```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -72,7 +72,7 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 ### Message with Attachments
 
 ```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -91,7 +91,7 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 ### Voice Message
 
 ```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -165,27 +165,24 @@ Video files delivered as rich media messages on LinkedIn.
 ## Workflow Example
 
 ```javascript
+const axios = require('axios');
+
 async function sendMessage(linkedinAccountId, leadUrl, messageText) {
-  const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message', {
-    method: 'POST',
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message';
+
+  const response = await axios.post(url, {
+    linkedinAccountId,
+    leadUrl,
+    text: messageText
+  }, {
     headers: {
-      'X-API-KEY': YOUR_API_KEY,
+      'X-API-KEY': "YOUR_API_KEY",
       'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      linkedinAccountId,
-      leadUrl,
-      text: messageText
-    })
+    }
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to send message: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-  console.log('Message sent:', result.action);
-  return result;
+  console.log('Message sent:', response.data.action);
+  return response.data;
 }
 ```
 

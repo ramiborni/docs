@@ -31,7 +31,7 @@ Remove a webhook URL from receiving event notifications. Webhooks are account-ba
 ## Example Request
 
 ```bash
-curl -X DELETE https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/unregister \
+curl -X DELETE https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/webhooks/unregister \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -52,18 +52,20 @@ curl -X DELETE https://integration-api-gateway.agreeablesea-e4815929.swedencentr
 ### Temporary Webhook Disabling
 
 ```javascript
+const axios = require('axios');
+
 // Disable webhook during maintenance
 async function disableWebhookDuringMaintenance() {
   const webhookUrl = 'https://your-app.com/webhooks/sendpilot';
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/webhooks/unregister';
   
   // Unregister webhook
-  await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/unregister', {
-    method: 'DELETE',
+  await axios.delete(url, {
     headers: {
-      'X-API-KEY': YOUR_API_KEY,
+      'X-API-KEY': "YOUR_API_KEY",
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ url: webhookUrl })
+    data: { url: webhookUrl }
   });
   
   console.log('Webhook disabled for maintenance');
@@ -127,6 +129,8 @@ Unregistering a webhook is immediate. All pending events will be lost. Consider 
 ### Graceful Webhook Removal
 
 ```javascript
+const axios = require('axios');
+
 async function gracefulWebhookRemoval(webhookUrl) {
   // 1. Stop new events from triggering actions
   await disableWebhookProcessing(webhookUrl);
@@ -135,13 +139,14 @@ async function gracefulWebhookRemoval(webhookUrl) {
   await processRemainingEvents();
   
   // 3. Unregister webhook
-  await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/webhooks/unregister', {
-    method: 'DELETE',
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/webhooks/unregister';
+  
+  await axios.delete(url, {
     headers: {
-      'X-API-KEY': YOUR_API_KEY,
+      'X-API-KEY': "YOUR_API_KEY",
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ url: webhookUrl })
+    data: { url: webhookUrl }
   });
   
   console.log('Webhook removed gracefully');

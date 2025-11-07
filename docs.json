@@ -36,7 +36,8 @@
         "pages": [
           "api-reference/endpoint/get-account-status",
           "api-reference/endpoint/post-account-logout",
-          "api-reference/endpoint/post-account-connect-linkedin"
+          "api-reference/endpoint/post-account-connect-linkedin",
+          "api-reference/endpoint/post-account-reconnect-linkedin"
         ]
       },
       {

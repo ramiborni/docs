@@ -35,7 +35,7 @@ Send a LinkedIn connection request to a target candidate. The request is queued 
 ## Example Request
 
 ```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/connection-request \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/connection-request \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -85,27 +85,24 @@ Connection notes are optional but highly recommended. Personalized connection re
 ## Workflow Example
 
 ```javascript
+const axios = require('axios');
+
 async function sendConnectionRequest(leadUrl, linkedinAccountId, note) {
-  const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/connection-request', {
-    method: 'POST',
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/connection-request';
+
+  const response = await axios.post(url, {
+    leadUrl,
+    linkedinAccountId,
+    connectionNote: note
+  }, {
     headers: {
-      'X-API-KEY': YOUR_API_KEY,
+      'X-API-KEY': "YOUR_API_KEY",
       'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      leadUrl,
-      linkedinAccountId,
-      connectionNote: note
-    })
+    }
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to send connection request: ${response.statusText}`);
-  }
-
-  const result = await response.json();
-  console.log('Connection request sent:', result.action);
-  return result;
+  console.log('Connection request sent:', response.data.action);
+  return response.data;
 }
 ```
 
