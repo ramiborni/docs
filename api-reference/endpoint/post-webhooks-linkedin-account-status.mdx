@@ -1,65 +1,245 @@
 ---
-title: "LinkedIn Account Status Webhook "
+title: "LinkedIn Account Disconnected Webhook"
 api: "POST /webhooks/linkedin/account-status"
-description: "Proposed webhook payload describing LinkedIn account connectivity updates"
+description: "Webhook payload describing LinkedIn account connectivity updates"
 tags:
   - webhooks
   - accounts
-  - proposed
 ---
 
 Receive proactive notifications whenever SendPilot detects a change in a managed LinkedIn account's status or connectivity state.
 
-<Info>
-This webhook is **proposed**. Field names, event types, and structures may change before general availability.
-</Info>
+## Event Type
 
-## Proposed Webhook Event
+`ACCOUNT_DISCONNECTED` (or `account.disconnected`)
+
+**Triggered when:** A LinkedIn account is disconnected (immediate in production, 30-second delay in sandbox)
+
+## Webhook Event Payload
 
 <ParamField body="eventId" type="string" required>
   Unique identifier for this webhook delivery. Use for idempotency protection.
+  
+  Example: `evt_acc_disconnected_1699358400000`
 </ParamField>
 
 <ParamField body="eventType" type="string" required>
-  Always `account.status_changed` for this webhook.
+  Always `account.disconnected` for this webhook.
 </ParamField>
 
 <ParamField body="timestamp" type="string" required>
   ISO-8601 timestamp when SendPilot detected the account state change.
+  
+  Example: `2025-11-07T10:00:00.000Z`
 </ParamField>
 
-<ParamField body="accountId" type="string" required>
-  Unique identifier for the SendPilot-managed account.
+<ParamField body="data" type="object" required>
+  Event data containing account disconnection details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      Unique identifier for the SendPilot-managed account.
+      
+      Example: `clxxx123456`
+    </ParamField>
+    
+    <ParamField body="reason" type="string" required>
+      Reason for disconnection. Possible values:
+      - `user_requested` - User manually disconnected
+      - `invalid_credentials` - Login credentials expired
+      - `linkedin_restriction` - LinkedIn account restricted
+      - `rate_limit_exceeded` - Too many actions
+      - `unknown` - Unknown reason
+      
+      Example: `user_requested`
+    </ParamField>
+    
+    <ParamField body="disconnectedBy" type="string" required>
+      Who initiated the disconnection.
+      
+      Example: `user`
+    </ParamField>
+    
+    <ParamField body="disconnectedAt" type="string" required>
+      ISO-8601 timestamp when the account was disconnected.
+      
+      Example: `2025-11-07T10:00:00.000Z`
+    </ParamField>
+  </Expandable>
 </ParamField>
 
-<ParamField body="status" type="string" required>
-  Current account state. Values: `ACTIVE`, `DISCONNECTED`, `DELETED`.
-</ParamField>
-
-## Proposed Webhook Payload Example
+## Example Webhook Payload
 
 ```json
 {
-  "eventId": "evt_01j0status123",
-  "eventType": "account.status_changed",
-  "timestamp": "2025-01-05T10:00:00Z",
-  "accountId": "acc_sendpilot_001",
-  "status": "DISCONNECTED"
+  "eventId": "evt_acc_disconnected_1699358400000",
+  "eventType": "account.disconnected",
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "reason": "user_requested",
+    "disconnectedBy": "user",
+    "disconnectedAt": "2025-11-07T10:00:00.000Z"
+  }
 }
 ```
 
+## Disconnection Reasons
+
+| Reason | Description | Action Required |
+|--------|-------------|-----------------|
+| `user_requested` | User manually disconnected the account | None - intentional disconnect |
+| `invalid_credentials` | Login credentials expired or invalid | Reconnect account with valid credentials |
+| `linkedin_restriction` | LinkedIn account restricted or suspended | Review LinkedIn account status |
+| `rate_limit_exceeded` | Too many actions performed | Wait and reduce activity rate |
+| `unknown` | Unknown reason | Contact SendPilot support |
+
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
+
 ## Handling the Webhook
 
-1. **Verify signatures** using the `X-SendPilot-Signature` header, identical to other SendPilot webhooks.
-2. **Check idempotency** with `eventId` (or your preferred unique key) before persisting the update.
-3. **Update internal records** so downstream systems see the new account status.
-4. **Trigger remediation flows** when `status` indicates the account requires attention.
+1. **Verify signatures** using the `X-SendPilot-Signature` header
+2. **Check idempotency** with `eventId` before persisting the update
+3. **Update internal records** so downstream systems see the new account status
+4. **Trigger remediation flows** when the account requires attention
 
 <Warning>
 Respond with `200 OK` once the event is accepted for processing. Return `5xx` only when you require SendPilot to retry delivery.
 </Warning>
 
-## See Also
+## Implementation Example
 
-- [Get Account Status](/api-reference/endpoint/get-account-status) — Pull the latest account snapshot on demand
-- [Message Received Webhook ](/api-reference/endpoint/post-webhooks-message-received) — Track inbound candidate replies
+```javascript
+app.post('/webhooks/linkedin/account-status', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  // 1. Verify webhook signature
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  // 2. Check for duplicate events
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ received: true });
+  }
+  
+  // 3. Process the account disconnection
+  try {
+    await db.accounts.update({
+      accountId: event.data.accountId,
+      status: 'disconnected',
+      disconnectionReason: event.data.reason,
+      disconnectedBy: event.data.disconnectedBy,
+      disconnectedAt: new Date(event.data.disconnectedAt)
+    });
+    
+    // Handle different disconnection reasons
+    if (event.data.reason === 'invalid_credentials') {
+      // Alert team to reconnect account
+      await alertTeam({
+        type: 'account_reconnection_needed',
+        accountId: event.data.accountId,
+        reason: event.data.reason
+      });
+    } else if (event.data.reason === 'linkedin_restriction') {
+      // Log for manual review
+      await logAccountRestriction(event.data.accountId);
+    }
+    
+    // Pause any active campaigns using this account
+    await pauseCampaignsForAccount(event.data.accountId);
+    
+    // Mark event as processed
+    await markEventProcessed(event.eventId);
+    
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+## Retry Behavior
+
+SendPilot implements automatic retries for failed webhook deliveries:
+
+- **Retry on**: 5xx errors, network timeouts
+- **No retry on**: 2xx, 4xx responses
+- **Retry schedule**: Exponential backoff (1s, 5s, 30s, 5m, 30m)
+- **Max attempts**: 5
+
+## Best Practices
+
+<Tip>
+Automatically pause campaigns and alert your team when accounts disconnect to prevent message delivery failures.
+</Tip>
+
+- Implement idempotency using `eventId` to prevent duplicate processing
+- Verify webhook signatures to ensure authenticity
+- Process webhooks asynchronously for better performance
+- Pause active campaigns when accounts disconnect
+- Set up alerts for `invalid_credentials` and `linkedin_restriction` reasons
+- Consider automatic reconnection flows for expired credentials
+
+## Remediation Strategies
+
+### Invalid Credentials
+
+```javascript
+async function handleInvalidCredentials(accountId) {
+  // Notify user to reconnect
+  await sendEmail({
+    to: accountOwner.email,
+    subject: 'LinkedIn Account Needs Reconnection',
+    body: `Your LinkedIn account ${accountId} needs to be reconnected.`
+  });
+  
+  // Pause campaigns
+  await pauseCampaignsForAccount(accountId);
+}
+```
+
+### LinkedIn Restriction
+
+```javascript
+async function handleLinkedInRestriction(accountId) {
+  // Log for manual review
+  await createSupportTicket({
+    type: 'linkedin_restriction',
+    accountId: accountId,
+    priority: 'high'
+  });
+  
+  // Disable account to prevent further issues
+  await disableAccount(accountId);
+}
+```
+
+### Rate Limit Exceeded
+
+```javascript
+async function handleRateLimitExceeded(accountId) {
+  // Reduce sending rate
+  await updateAccountSettings(accountId, {
+    dailyMessageCap: Math.floor(currentCap * 0.7), // Reduce by 30%
+    dailyConnectionCap: Math.floor(currentCap * 0.7)
+  });
+  
+  // Schedule automatic retry
+  await scheduleReconnect(accountId, { delayHours: 24 });
+}
+```

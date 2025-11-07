@@ -4,99 +4,125 @@ api: "POST /webhooks/message-received"
 description: "Webhook payload invoked when a LinkedIn message arrives"
 tags:
   - webhooks
-  - proposed
+  - messaging
 ---
 
-SendPilot delivers inbound LinkedIn messages to Staffer via webhooks in real-time. Configure your webhook endpoint to receive and process candidate responses.
+SendPilot delivers inbound LinkedIn messages via webhooks in real-time. This webhook is triggered when a LinkedIn message is received in response to a sent message.
 
-<Info>
-This webhook is in **proposed** status. Field names and structures may change before finalization.
-</Info>
+## Event Type
 
-## Proposed Webhook Event
+`MESSAGE_RECEIVED` (or `message.received`)
+
+**Triggered when:** A LinkedIn message is received in response to a sent message (30 seconds to 5 minutes delay in sandbox)
+
+## Webhook Event Payload
 
 <ParamField body="eventId" type="string" required>
   Unique identifier for this webhook event. Use for idempotency tracking.
+  
+  Example: `evt_msg_received_1699358400000`
 </ParamField>
 
 <ParamField body="eventType" type="string" required>
-  Type of message event. Values: `message.received`, `message.read`.
+  Type of message event. Value: `message.received`
 </ParamField>
 
 <ParamField body="timestamp" type="string" required>
   ISO-8601 timestamp when SendPilot captured the event.
-</ParamField>
-
-<ParamField body="accountId" type="string" required>
-  SendPilot-managed account identifier.
-</ParamField>
-
-<ParamField body="conversationId" type="string" required>
-  Unique conversation thread identifier.
-</ParamField>
-
-<ParamField body="message" type="object" required>
-  Message details for the event.
   
-  <Expandable title="Message object">
-    <ParamField body="messageId" type="string" required>
-      Unique message identifier.
-    </ParamField>
-    
-    <ParamField body="text" type="string">
-      Message body content.
-    </ParamField>
-    
-    <ParamField body="sender" type="object" required>
-      Information about the message sender.
+  Example: `2025-11-07T10:00:00.000Z`
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Event data containing message details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      LinkedIn account ID that received the message.
       
-      <Expandable title="Sender object">
-        <ParamField body="profileId" type="string" required>
-          LinkedIn profile identifier for the sender.
-        </ParamField>
-        
-        <ParamField body="name" type="string">
-          Display name of the sender.
-        </ParamField>
-        
-        <ParamField body="profileUrl" type="string">
-          Public LinkedIn profile URL.
-        </ParamField>
-      </Expandable>
+      Example: `clxxx123456`
     </ParamField>
     
-    <ParamField body="sentAt" type="string" required>
-      ISO-8601 timestamp when the message was sent.
+    <ParamField body="conversationId" type="string" required>
+      Unique conversation thread identifier.
+      
+      Example: `conv_abc123def456`
     </ParamField>
     
-    <ParamField body="attachments" type="array">
-      Media or file attachments included with the message.
+    <ParamField body="messageId" type="string" required>
+      Unique message identifier for the received message.
+      
+      Example: `msg_reply_1699358400000`
+    </ParamField>
+    
+    <ParamField body="originalMessageId" type="string" required>
+      ID of the original message that this is a reply to.
+      
+      Example: `msg_abc123`
+    </ParamField>
+    
+    <ParamField body="senderProfileUrl" type="string" required>
+      LinkedIn profile URL of the sender.
+      
+      Example: `https://www.linkedin.com/in/john-doe`
+    </ParamField>
+    
+    <ParamField body="recipientProfileUrl" type="string" required>
+      Profile URL of the recipient (your LinkedIn account).
+      
+      Example: `clxxx123456`
+    </ParamField>
+    
+    <ParamField body="textContent" type="string" required>
+      Message text content.
+      
+      Example: `Thanks for reaching out! I'd be happy to connect.`
+    </ParamField>
+    
+    <ParamField body="direction" type="string" required>
+      Message direction. Value: `INBOUND`
+    </ParamField>
+    
+    <ParamField body="receivedAt" type="string" required>
+      ISO-8601 timestamp when the message was received.
+      
+      Example: `2025-11-07T10:00:00.000Z`
     </ParamField>
   </Expandable>
 </ParamField>
 
-## Proposed Webhook Payload Example
+## Example Webhook Payload
 
 ```json
 {
-  "eventId": "evt_01j0ghi789",
+  "eventId": "evt_msg_received_1699358400000",
   "eventType": "message.received",
-  "timestamp": "2025-01-05T14:23:10.965Z",
-  "accountId": "acc_sendpilot_001",
-  "conversationId": "conv_R8JxM9WX7eoHLp6gSVtWQ",
-  "message": {
-    "messageId": "msg_01j0ghi789",
-    "text": "Thanks for reaching out! I'd be interested in learning more about the role.",
-    "sender": {
-      "profileId": "urn:li:member:123456789",
-      "name": "Alex Martinez",
-      "profileUrl": "https://www.linkedin.com/in/alex-martinez/"
-    },
-    "sentAt": "2025-01-05T14:23:05Z",
-    "attachments": []
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "conversationId": "conv_abc123def456",
+    "messageId": "msg_reply_1699358400000",
+    "originalMessageId": "msg_abc123",
+    "senderProfileUrl": "https://www.linkedin.com/in/john-doe",
+    "recipientProfileUrl": "clxxx123456",
+    "textContent": "Thanks for reaching out! I'd be happy to connect.",
+    "direction": "INBOUND",
+    "receivedAt": "2025-11-07T10:00:00.000Z"
   }
 }
 ```
+
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
 
 ## Implementation Guidance
 
@@ -117,7 +143,7 @@ app.post('/webhooks/message-received', async (req, res) => {
   // 2. Check for duplicate events (idempotency)
   const isDuplicate = await checkEventProcessed(event.eventId);
   if (isDuplicate) {
-    return res.status(200).json({ status: 'already_processed' });
+    return res.status(200).json({ received: true });
   }
   
   // 3. Process the message
@@ -128,7 +154,7 @@ app.post('/webhooks/message-received', async (req, res) => {
     await markEventProcessed(event.eventId);
     
     // 5. Respond with 200 to acknowledge receipt
-    res.status(200).json({ status: 'processed' });
+    res.status(200).json({ received: true });
   } catch (error) {
     console.error('Error processing webhook:', error);
     // Return 500 to trigger SendPilot retry
@@ -193,53 +219,41 @@ Process the inbound message and trigger your AI response:
 
 ```javascript
 async function processInboundMessage(event) {
-  const { eventId, eventType, accountId, conversationId, message, timestamp } = event;
+  const { eventId, eventType, data, timestamp } = event;
   
   // 1. Store message in database
   await db.messages.create({
     eventId,
-    messageId: message.messageId,
-    conversationId,
-    accountId,
-    senderProfileId: message.sender.profileId,
-    senderName: message.sender.name,
-    text: message.text,
+    messageId: data.messageId,
+    conversationId: data.conversationId,
+    accountId: data.accountId,
+    senderProfileUrl: data.senderProfileUrl,
+    textContent: data.textContent,
     eventType,
     receivedAt: new Date(timestamp)
   });
   
-  // 2. Only process inbound candidate messages
-  if (eventType !== 'message.received') {
-    return;
-  }
+  // 2. Generate AI response
+  const context = await getConversationContext(data.conversationId);
+  const aiResponse = await generateResponse(data.textContent, context);
   
-  // 3. Generate AI response
-  const context = await getConversationContext(conversationId);
-  const aiResponse = await generateResponse(message.text, context);
-  
-  // 4. Send response via SendPilot
-  await fetch('https://api.sendpilot.example.com/message', {
+  // 3. Send response via SendPilot
+  await fetch('https://api.sendpilot.example.com/messaging/message', {
     method: 'POST',
     headers: {
-      'X-API-KEY': SENDPILOT_API_KEY,
+      'x-user-id': YOUR_USER_ID,
+      'x-project-id': YOUR_PROJECT_ID,
+      'x-environment': 'production',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      accountId,
-      leadUrl: message.sender.profileUrl,
+      linkedinAccountId: data.accountId,
+      leadUrl: data.senderProfileUrl,
       text: aiResponse
     })
   });
 }
 ```
-
-## Webhook Configuration
-
-Provide SendPilot with your webhook endpoint details during onboarding:
-
-1. **Endpoint URL**: `https://api.staffer.example.com/webhooks/message-received`
-2. **Webhook Secret**: SendPilot will provide a secret for signature verification
-3. **IP Whitelist** (optional): Restrict requests to SendPilot's IP ranges
 
 ## Retry Behavior
 
@@ -263,35 +277,6 @@ Always respond with `200 OK` once you've successfully received and queued the we
 | 401 | Signature validation failed | No retry, alert SendPilot team |
 | 500 | Temporary failure | Retry with exponential backoff |
 
-## Testing Webhooks
-
-### Local Development
-
-Use tools like ngrok to expose your local server:
-
-```bash
-ngrok http 3000
-```
-
-Provide the ngrok URL to SendPilot for testing:
-```
-https://abc123.ngrok.io/webhooks/message-received
-```
-
-### Test Events
-
-Request test webhook events from SendPilot to validate your implementation:
-
-```bash
-curl -X POST https://api.sendpilot.example.com/webhooks/test \
-  -H "X-API-KEY: YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "webhookType": "message.received",
-    "targetUrl": "https://your-domain.com/webhooks/message-received"
-  }'
-```
-
 ## Best Practices
 
 <Tip>
@@ -312,50 +297,13 @@ app.post('/webhooks/message-received', async (req, res) => {
   
   // Immediately acknowledge and queue for processing
   await messageQueue.add(req.body);
-  res.status(200).json({ status: 'queued' });
+  res.status(200).json({ received: true });
 });
 
 // Process asynchronously
 messageQueue.process(async (job) => {
   const event = job.data;
   await processInboundMessage(event);
-});
-```
-
-### Monitoring
-
-Track webhook delivery health:
-
-```javascript
-const metrics = {
-  received: 0,
-  processed: 0,
-  failed: 0,
-  duplicates: 0
-};
-
-app.post('/webhooks/message-received', async (req, res) => {
-  metrics.received++;
-  
-  try {
-    const isDuplicate = await checkEventProcessed(req.body.message.messageId);
-    if (isDuplicate) {
-      metrics.duplicates++;
-      return res.status(200).json({ status: 'already_processed' });
-    }
-    
-    await processInboundMessage(req.body);
-    metrics.processed++;
-    res.status(200).json({ status: 'processed' });
-  } catch (error) {
-    metrics.failed++;
-    res.status(500).json({ error: 'Processing failed' });
-  }
-});
-
-// Expose metrics endpoint
-app.get('/metrics/webhooks', (req, res) => {
-  res.json(metrics);
 });
 ```
 
@@ -375,10 +323,3 @@ app.get('/metrics/webhooks', (req, res) => {
 | Duplicate events | SendPilot retries after timeout | Implement idempotency using `eventId` |
 | Timeouts | Slow synchronous processing | Move processing to async queue |
 | Missing webhooks | Endpoint downtime or 5xx errors | Monitor uptime, implement fallback polling |
-
-## See Also
-
-- [Authentication](/api-reference/authentication) - Webhook signature verification
-- [Get Messages](/api-reference/endpoint/get-messages) - Polling fallback for missed webhooks
-- [Send Message](/api-reference/endpoint/post-message) - Responding to candidate messages
-

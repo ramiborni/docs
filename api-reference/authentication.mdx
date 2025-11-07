@@ -21,7 +21,7 @@ curl https://api.sendpilot.example.com/connection-request \
 
 API keys are provisioned by SendPilot during the partnership onboarding process. Each environment (staging, production) will receive separate API keys:
 
-1. **Staging API Key**: For development and testing
+1. **Sandbox API Key**: For development and testing
 2. **Production API Key**: For live integration
 
 Contact your SendPilot integration partner to request API keys.
@@ -70,9 +70,7 @@ const response = await fetch('https://api.sendpilot.example.com/message', {
 
 Inbound webhook requests from SendPilot include a signature header for verification:
 
-```
-X-SendPilot-Signature: t=1234567890,v1=abc123...
-```
+
 
 ### Verifying Webhook Signatures
 

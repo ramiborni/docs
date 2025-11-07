@@ -1,6 +1,6 @@
 ---
 title: "Get Messages"
-api: "GET /messages"
+api: "GET /messaging/messages"
 description: "Retrieve recent messages for reconciliation or webhook fallback scenarios"
 ---
 
@@ -15,65 +15,131 @@ This endpoint is intended for occasional polling, not real-time message retrieva
 
 ## Query Parameters
 
-<ParamField query="accountId" type="string" required>
-  SendPilot-managed account identifier to poll for messages.
+<ParamField query="linkedinAccountId" type="string" required>
+  LinkedIn account ID to retrieve messages for.
+  
+  Example: `clxxx123456`
 </ParamField>
 
 <ParamField query="limit" type="integer" required>
-  Maximum number of messages to return for the current page.
+  Maximum number of messages to retrieve (minimum: 1).
+  
+  Example: `50`
 </ParamField>
 
 ## Response
 
-<ResponseField name="messages" type="array">
-  Page of messages returned for the specified account.
+<ResponseField name="conversations" type="array" required>
+  Array of conversations containing messages.
   
-  <Expandable title="Message object">
-    <ResponseField name="messageId" type="string">
-      Unique message identifier
+  <Expandable title="Conversation object">
+    <ResponseField name="conversationId" type="string" required>
+      Unique conversation identifier.
     </ResponseField>
     
-    <ResponseField name="isProvidedLinkedinAccount" type="boolean">
-      Indicates whether the message originated from a SendPilot-provided LinkedIn account.
+    <ResponseField name="participants" type="array" required>
+      Array of participants in the conversation (excluding the provided LinkedIn account).
+      
+      <Expandable title="Participant object">
+        <ResponseField name="profileUrl" type="string" required>
+          LinkedIn profile URL.
+        </ResponseField>
+        
+        <ResponseField name="name" type="string" required>
+          Full name of the participant.
+        </ResponseField>
+        
+        <ResponseField name="profilePictureUrl" type="string">
+          Profile picture URL.
+        </ResponseField>
+        
+        <ResponseField name="headline" type="string">
+          Professional headline.
+        </ResponseField>
+        
+        <ResponseField name="location" type="string">
+          Location.
+        </ResponseField>
+      </Expandable>
     </ResponseField>
     
-    <ResponseField name="text" type="string">
-      Message content
+    <ResponseField name="messages" type="array" required>
+      Array of messages in the conversation.
+      
+      <Expandable title="Message object">
+        <ResponseField name="messageId" type="string" required>
+          Unique message identifier.
+        </ResponseField>
+        
+        <ResponseField name="senderProfileUrl" type="string" required>
+          LinkedIn profile URL of the sender.
+        </ResponseField>
+        
+        <ResponseField name="text" type="string" required>
+          Message text content.
+        </ResponseField>
+        
+        <ResponseField name="sentAt" type="string" required>
+          Timestamp when message was sent (ISO-8601 format).
+        </ResponseField>
+      </Expandable>
     </ResponseField>
     
-    <ResponseField name="sentAt" type="string">
-      ISO-8601 timestamp when message was sent
+    <ResponseField name="lastMessageAt" type="string" required>
+      Timestamp of the last message in the conversation.
+    </ResponseField>
+    
+    <ResponseField name="unreadCount" type="number" required>
+      Number of unread messages in the conversation.
     </ResponseField>
   </Expandable>
 </ResponseField>
 
-<ResponseField name="page" type="integer">
-  Current page index returned in the response. Starts at 0.
+<ResponseField name="page" type="integer" required>
+  Current page number (starts at 0).
 </ResponseField>
 
 ## Example Request
 
 ```bash
-curl -X GET "https://api.sendpilot.example.com/messages?accountId=acc_sendpilot_001&limit=50" \
-  -H "X-API-KEY: YOUR_API_KEY"
+curl -X GET "https://api.sendpilot.example.com/messaging/messages?linkedinAccountId=clxxx123456&limit=50" \
+  -H "x-user-id: YOUR_USER_ID" \
+  -H "x-project-id: YOUR_PROJECT_ID" \
+  -H "x-environment: production"
 ```
 
 ## Example Response
 
 ```json
 {
-  "messages": [
+  "conversations": [
     {
-      "messageId": "msg_01hxabc123",
-      "isProvidedLinkedinAccount": true,
-      "text": "Thanks for reaching out! I'd be interested in learning more.",
-      "sentAt": "2025-10-15T14:23:10Z"
-    },
-    {
-      "messageId": "msg_01hxdef456",
-      "isProvidedLinkedinAccount": false,
-      "text": "Great! When would be a good time to chat?",
-      "sentAt": "2025-10-15T14:25:33Z"
+      "conversationId": "conv_abc123def456",
+      "participants": [
+        {
+          "profileUrl": "https://www.linkedin.com/in/john-doe",
+          "name": "John Doe",
+          "profilePictureUrl": "https://media.licdn.com/dms/image/...",
+          "headline": "Software Engineer at TechCorp",
+          "location": "San Francisco, CA"
+        }
+      ],
+      "messages": [
+        {
+          "messageId": "msg_abc123",
+          "senderProfileUrl": "clxxx123456",
+          "text": "Hi John, I wanted to reach out about a great opportunity.",
+          "sentAt": "2025-11-05T10:00:00Z"
+        },
+        {
+          "messageId": "msg_def456",
+          "senderProfileUrl": "https://www.linkedin.com/in/john-doe",
+          "text": "Hello, thanks for connecting!",
+          "sentAt": "2025-11-05T10:30:00Z"
+        }
+      ],
+      "lastMessageAt": "2025-11-05T10:30:00Z",
+      "unreadCount": 0
     }
   ],
   "page": 0
@@ -82,13 +148,40 @@ curl -X GET "https://api.sendpilot.example.com/messages?accountId=acc_sendpilot_
 
 ## Error Responses
 
-### 404 Not Found
+### 400 Bad Request
 
-Returned when no messages are available for the supplied account:
+Returned when query parameters are invalid:
 
 ```json
 {
-  "messages": []
+  "error": "Invalid query parameters",
+  "message": "linkedinAccountId is required"
 }
 ```
 
+### 401 Unauthorized
+
+Returned when API key is missing or invalid:
+
+```json
+{
+  "error": "Invalid or missing API key"
+}
+```
+
+## Best Practices
+
+<Tip>
+Use this endpoint for reconciliation and fallback scenarios. For real-time message notifications, use the Message Received webhook.
+</Tip>
+
+- Poll messages periodically (e.g., every 5-10 minutes) as a fallback mechanism
+- Store `conversationId` and `messageId` to track message history
+- Implement pagination using the `page` parameter for large result sets
+- Use the `limit` parameter to control response size and API usage
+- Monitor `unreadCount` to track new messages in each conversation
+
+## See Also
+
+- [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) - Real-time message notifications
+- [Send Message](/api-reference/endpoint/post-message) - Send messages to LinkedIn connections

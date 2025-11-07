@@ -1,764 +1,813 @@
-openapi: 3.1.0
+openapi: 3.0.0
 info:
-  title: SendPilot LinkedIn Transport API
-  version: 0.1.0
-  description: >-
-    Draft specification for the transport-focused API that exposes SendPilot's LinkedIn
-    automation infrastructure to Staffer. Endpoints cover connection requests,
-    messaging, account telemetry, and webhook notifications.
-servers:
-  - url: https://api.sendpilot.example.com
-    description: Placeholder production endpoint (to be confirmed).
+  title: SendPilot Integration API
+  description: SendPilot LinkedIn API integration with sandbox and production modes
+  version: "1.0"
+  contact: {}
+servers: []
 tags:
   - name: Messaging
+    description: LinkedIn messaging and connection requests
   - name: Accounts
+    description: Account management and authentication
   - name: Webhooks
+    description: Webhook configuration and management
 paths:
-  /connection-request:
+  /messaging/connection-request:
     post:
-      summary: Send LinkedIn connection request
-      description: Queue a LinkedIn connection request through a managed account in the SendPilot pool.
-      operationId: createConnectionRequest
+      summary: Send a LinkedIn connection request
+      description: Send a connection request to a LinkedIn profile with an optional custom note
+      operationId: MessagingController_sendConnectionRequest
       tags:
         - Messaging
+      security:
+        - environment: []
+        - user-id: []
+        - project-id: []
       requestBody:
         required: true
+        description: Connection request details
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConnectionRequestInput'
+              $ref: '#/components/schemas/ConnectionRequestDto'
       responses:
         '200':
-          description: Connection request submitted for delivery.
+          description: Connection request sent successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectionRequestResponse'
+                $ref: '#/components/schemas/ConnectionRequestResponseDto'
         '400':
-          description: Invalid payload, malformed request body, or note exceeds allowed character limits.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectionRequestError'
+          description: Invalid request data
         '401':
-          description: Provider account disconnected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectionRequestError'
-        '404':
-          description: Lead cannot be located on LinkedIn.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectionRequestError'
-        '500':
-          description: Unexpected provider or infrastructure error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectionRequestError'
-        '503':
-          description: SendPilot infrastructure temporarily unavailable.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectionRequestError'
-        '504':
-          description: Request to LinkedIn timed out.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectionRequestError'
-  /message:
+          description: Invalid or missing API key
+  /messaging/message:
     post:
-      summary: Send LinkedIn message
-      description: Dispatch a message to an existing LinkedIn connection using the managed account pool.
-      operationId: sendMessage
+      summary: Send a LinkedIn message
+      description: Send a message to a LinkedIn connection with optional text, attachments, voice, or video
+      operationId: MessagingController_sendMessage
       tags:
         - Messaging
+      security:
+        - environment: []
+        - user-id: []
+        - project-id: []
       requestBody:
         required: true
+        description: Message details and content
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MessageInput'
+              $ref: '#/components/schemas/SendMessageDto'
       responses:
-        '202':
-          description: Message accepted for delivery.
+        '201':
+          description: Message sent successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessageAccepted'
+                $ref: '#/components/schemas/SendMessageResponseDto'
         '400':
-          $ref: '#/components/responses/BadRequestError'
+          description: Invalid request data
         '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '429':
-          $ref: '#/components/responses/RateLimitError'
-        '500':
-          $ref: '#/components/responses/ServerError'
-  /account-status:
+          description: Invalid or missing API key
+  /messaging/messages:
     get:
-      summary: Get account health and limits
-      description: Retrieve health status, available quota, and daily caps for accounts in the pool.
-      operationId: listAccountStatus
-      tags:
-        - Accounts
-      parameters:
-        - $ref: '#/components/parameters/AccountIdQuery'
-        - $ref: '#/components/parameters/IncludeHistoryQuery'
-      responses:
-        '200':
-          description: Account status payload.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountStatusResponse'
-        '401':
-          $ref: '#/components/responses/UnauthorizedError'
-        '500':
-          $ref: '#/components/responses/ServerError'
-  /account/connect-linkedin:
-    post:
-      summary: Connect LinkedIn account
-      description: Register a new LinkedIn account session with SendPilot or refresh credentials for an existing session.
-      operationId: connectLinkedInAccount
-      tags:
-        - Accounts
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConnectLinkedInRequest'
-      responses:
-        '200':
-          description: LinkedIn account connected or credentials refreshed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInResponse'
-              example:
-                action: account_created
-                data:
-                  accountId: acc_sendpilot_001
-        '400':
-          description: Invalid or malformed connect request.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '401':
-          description: LinkedIn credentials rejected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '403':
-          description: Account restricted or insufficient permissions.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '407':
-          description: Proxy authentication failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '408':
-          description: Request timed out while contacting LinkedIn.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '409':
-          description: Conflicting operation or existing account session detected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '425':
-          description: Authentication currently in progress; try again once the previous attempt completes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '500':
-          description: Unexpected provider or infrastructure error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-  /account/reconnect-linkedin:
-    post:
-      summary: Reconnect LinkedIn account
-      description: Refresh LinkedIn session cookies or credentials for an existing managed account.
-      operationId: reconnectLinkedInAccount
-      tags:
-        - Accounts
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ConnectLinkedInRequest'
-      responses:
-        '200':
-          description: LinkedIn account connected or credentials refreshed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInResponse'
-              example:
-                action: account_reconnected
-                data:
-                  accountId: acc_sendpilot_001
-        '400':
-          description: Invalid or malformed reconnect request.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '401':
-          description: LinkedIn credentials rejected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '403':
-          description: Account restricted or insufficient permissions.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '407':
-          description: Proxy authentication failed.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '408':
-          description: Request timed out while contacting LinkedIn.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '409':
-          description: Conflicting operation or existing account session detected.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '425':
-          description: Authentication currently in progress; try again once the previous attempt completes.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-        '500':
-          description: Unexpected provider or infrastructure error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ConnectLinkedInError'
-  /messages:
-    get:
-      summary: Poll for LinkedIn messages
-      description: Retrieve recent messages for reconciliation or webhook fallback scenarios.
-      operationId: listMessages
+      summary: Retrieve LinkedIn messages
+      description: Get a list of messages for a specific LinkedIn account
+      operationId: MessagingController_getMessages
       tags:
         - Messaging
+      security:
+        - environment: []
+        - user-id: []
+        - project-id: []
       parameters:
-        - name: accountId
-          in: query
+        - name: linkedinAccountId
           required: true
+          in: query
+          description: LinkedIn account ID to retrieve messages for
           schema:
             type: string
-          description: SendPilot-managed account identifier to poll for messages.
+            example: clxxx123456
         - name: limit
-          in: query
           required: true
+          in: query
+          description: Maximum number of messages to retrieve
           schema:
-            type: integer
+            type: number
             minimum: 1
-          description: Maximum number of messages to return.
+            example: 50
       responses:
         '200':
-          description: Messages retrieved successfully.
+          description: Messages retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MessagesResponse'
-        '404':
-          description: No messages found for the supplied account.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MessagesNotFound'
-  /webhooks/message-received:
-    post:
-      summary: Receive LinkedIn message webhook
-      description: Webhook endpoint invoked by SendPilot when a new LinkedIn message is captured.
-      operationId: messageReceivedWebhook
+                $ref: '#/components/schemas/GetMessagesResponseDto'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Invalid or missing API key
+  /accounts/status:
+    get:
+      summary: Get account status
+      description: Retrieve current status and usage limits for a LinkedIn account
+      operationId: AccountsController_getAccountStatus
       tags:
-        - Webhooks
+        - Accounts
+      security:
+        - environment: []
+        - user-id: []
+        - project-id: []
+      parameters:
+        - name: linkedinAccountId
+          required: true
+          in: query
+          description: LinkedIn Account ID to check status for
+          schema:
+            type: string
+            example: acc_123456
+      responses:
+        '200':
+          description: Account status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAccountStatusResponseDto'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Invalid or missing API key
+  /accounts/logout:
+    post:
+      summary: Logout LinkedIn account
+      description: Logout and disconnect a LinkedIn account from SendPilot
+      operationId: AccountsController_logoutAccount
+      tags:
+        - Accounts
+      security:
+        - environment: []
+        - user-id: []
+        - project-id: []
       requestBody:
         required: true
+        description: Account logout details
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/MessageReceivedEvent'
+              $ref: '#/components/schemas/AccountLogoutDto'
       responses:
         '200':
-          description: Webhook processed successfully.
+          description: Account logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountLogoutResponseDto'
         '400':
-          description: Invalid payload; should trigger retry according to webhook contract.
+          description: Invalid request data
         '401':
-          description: Signature or authentication failure.
+          description: Invalid or missing API key
+  /accounts/connect-linkedin:
+    post:
+      summary: Connect LinkedIn account
+      description: Connect a LinkedIn account to SendPilot using credentials or tokens
+      operationId: AccountsController_connectLinkedIn
+      tags:
+        - Accounts
+      security:
+        - environment: []
+        - user-id: []
+        - project-id: []
+      requestBody:
+        required: true
+        description: LinkedIn connection details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectLinkedInDto'
+      responses:
+        '200':
+          description: LinkedIn account connected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectLinkedInResponseDto'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Invalid or missing API key
+  /accounts/reconnect-linkedin:
+    post:
+      summary: Reconnect LinkedIn account
+      description: Reconnect an existing LinkedIn account to SendPilot with updated credentials or tokens
+      operationId: AccountsController_reconnectLinkedIn
+      tags:
+        - Accounts
+      security:
+        - environment: []
+        - user-id: []
+        - project-id: []
+      requestBody:
+        required: true
+        description: LinkedIn reconnection details including account ID
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReconnectLinkedInDto'
+      responses:
+        '200':
+          description: LinkedIn account reconnected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReconnectLinkedInResponseDto'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Invalid or missing API key
+        '404':
+          description: LinkedIn account not found
+  /webhooks/register:
+    post:
+      summary: Register a webhook URL
+      description: Register a webhook URL to receive event notifications from SendPilot. Webhooks are account-based (per user). Supports both Clerk authentication (Bearer token) and API Key authentication (x-user-id, x-project-id, x-environment headers)
+      operationId: WebhooksController_registerWebhook
+      tags:
+        - Webhooks
+      security:
+        - bearer: []
+        - environment: []
+        - user-id: []
+        - project-id: []
+      parameters:
+        - name: environment
+          required: false
+          in: query
+          description: Environment (sandbox or production) - required when using Clerk authentication, optional when using API Key authentication (uses x-environment header)
+          schema:
+            type: string
+            enum:
+              - sandbox
+              - production
+      requestBody:
+        required: true
+        description: Webhook registration details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterWebhookDto'
+      responses:
+        '200':
+          description: Webhook registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterWebhookResponseDto'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Invalid or missing authentication
+  /webhooks/unregister:
+    delete:
+      summary: Unregister a webhook URL
+      description: Remove a webhook URL from receiving event notifications. Webhooks are account-based (per user). Supports both Clerk authentication (Bearer token) and API Key authentication (x-user-id, x-project-id, x-environment headers)
+      operationId: WebhooksController_unregisterWebhook
+      tags:
+        - Webhooks
+      security:
+        - bearer: []
+        - environment: []
+        - user-id: []
+        - project-id: []
+      parameters:
+        - name: environment
+          required: false
+          in: query
+          description: Environment (sandbox or production) - required when using Clerk authentication, optional when using API Key authentication (uses x-environment header)
+          schema:
+            type: string
+            enum:
+              - sandbox
+              - production
+      requestBody:
+        required: true
+        description: Webhook unregistration details
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UnregisterWebhookDto'
+      responses:
+        '200':
+          description: Webhook unregistered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnregisterWebhookResponseDto'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Invalid or missing authentication
+  /webhooks/list:
+    get:
+      summary: List registered webhooks
+      description: Get all registered webhook URLs for your account. Webhooks are account-based (per user). Supports both Clerk authentication (Bearer token) and API Key authentication (x-user-id, x-project-id, x-environment headers)
+      operationId: WebhooksController_listWebhooks
+      tags:
+        - Webhooks
+      security:
+        - bearer: []
+        - environment: []
+        - user-id: []
+        - project-id: []
+      parameters:
+        - name: environment
+          required: false
+          in: query
+          description: Environment (sandbox or production) - required when using Clerk authentication, optional when using API Key authentication (uses x-environment header)
+          schema:
+            type: string
+            enum:
+              - sandbox
+              - production
+      responses:
+        '200':
+          description: List of registered webhooks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListWebhooksResponseDto'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Invalid or missing authentication
 components:
-  parameters:
-    AccountIdQuery:
-      name: accountId
-      in: query
-      required: false
-      schema:
-        type: string
-      description: Filter by a specific SendPilot-managed account identifier.
-    IncludeHistoryQuery:
-      name: includeHistory
-      in: query
-      required: false
-      schema:
-        type: boolean
-        default: false
-      description: Include historical usage data if available.
-    SinceQuery:
-      name: since
-      in: query
-      required: false
-      schema:
-        type: string
-        format: date-time
-      description: Return messages created after the provided ISO-8601 timestamp.
-    LimitQuery:
-      name: limit
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 500
-        default: 100
-      description: Maximum number of items to return.
-    ConversationIdQuery:
-      name: conversationId
-      in: query
-      required: false
-      schema:
-        type: string
-      description: Filter results to a specific conversation.
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      description: Clerk authentication token
+    project-id:
+      type: apiKey
+      in: header
+      name: x-project-id
+      description: Project ID for your SendPilot project
+    user-id:
+      type: apiKey
+      in: header
+      name: x-user-id
+      description: User ID for authentication
+    environment:
+      type: apiKey
+      in: header
+      name: x-environment
+      description: Environment (use "sandbox" for testing, "production" for live)
   schemas:
-    ConnectionRequestInput:
+    ConnectionRequestDto:
       type: object
       required:
         - leadUrl
-        - providerId
+        - linkedinAccountId
       properties:
         leadUrl:
           type: string
-          description: Public LinkedIn profile URL for the target lead.
-          examples:
-            - https://www.linkedin.com/in/alex-example/
-        providerId:
+          description: LinkedIn profile URL of the lead
+          example: https://www.linkedin.com/in/john-doe
+        linkedinAccountId:
           type: string
-          description: Identifier of the connected LinkedIn provider returned by the connect-account flow.
-          examples:
-            - prov_li_acc_001
+          description: LinkedIn account database ID (use the accountId returned from the connect LinkedIn endpoint)
+          example: clxxx123456
         connectionNote:
           type: string
-          description: Optional invitation message attached to the request. Premium accounts support up to 300 characters; standard accounts should stay under 200.
+          description: Optional connection note to include with the request (max 300 characters)
+          example: Hi John, I noticed we share similar interests in tech...
           maxLength: 300
-          examples:
-            - "Hi Alex, I'd love to connect and share more about our open role."
-    ConnectionRequestResponse:
+    ConnectionRequestResponseDto:
       type: object
       required:
         - action
       properties:
         action:
           type: string
-          enum:
-            - connection_sent
-          description: Outcome of the submission.
-          examples:
-            - connection_sent
-    ConnectionRequestError:
+          description: Action performed
+          example: connection_request_sent
+    FileUploadDto:
+      type: object
+      required:
+        - fileId
+        - filename
+      properties:
+        fileId:
+          type: string
+          description: Unique file identifier
+          example: file_abc123
+        filename:
+          type: string
+          description: Original filename
+          example: document.pdf
+    SendMessageDto:
+      type: object
+      required:
+        - linkedinAccountId
+      properties:
+        linkedinAccountId:
+          type: string
+          description: LinkedIn account ID (use the linkedinAccountId returned from the connect LinkedIn endpoint)
+          example: clxxx123456
+        text:
+          type: string
+          description: Message text content
+          example: Hi! I wanted to reach out about...
+        attachments:
+          type: array
+          description: File attachments to include with the message
+          items:
+            $ref: '#/components/schemas/FileUploadDto'
+        voiceMessage:
+          description: Voice message attachment
+          allOf:
+            - $ref: '#/components/schemas/FileUploadDto'
+        videoMessage:
+          description: Video message attachment
+          allOf:
+            - $ref: '#/components/schemas/FileUploadDto'
+        leadUrl:
+          type: string
+          description: LinkedIn profile URL of the lead to send message to
+          example: https://www.linkedin.com/in/john-doe
+    SendMessageResponseDto:
       type: object
       required:
         - action
       properties:
         action:
           type: string
-          description: Error identifier describing why the connection request failed.
-          enum:
-            - errors/invalid_parameters
-            - errors/malformed_request
-            - errors/content_too_large
-            - errors/invalid_url
-            - errors/too_many_characters
-            - errors/unescaped_characters
-            - errors/missing_parameters
-            - errors/account_disconnected
-            - errors/not_found
-            - errors/unexpected_error
-            - errors/provider_error
-            - errors/authentication_intent_error
-            - errors/no_client_session
-            - errors/no_channel
-            - errors/no_handler
-            - errors/network_down
-            - errors/service_unavailable
-            - errors/request_timeout
-    MessageInput:
+          description: Action performed
+          example: message_sent
+    ParticipantProfileDto:
       type: object
       required:
-        - message
+        - profileUrl
+        - name
       properties:
-        conversationId:
+        profileUrl:
           type: string
-          description: SendPilot conversation identifier.
-          examples:
-            - conv_01hx123
-        recipientProfileId:
+          description: LinkedIn profile URL
+          example: https://www.linkedin.com/in/john-doe
+        name:
           type: string
-          description: LinkedIn URN or profile URL of the recipient (required if conversationId absent).
-        message:
+          description: Full name of the participant
+          example: John Doe
+        profilePictureUrl:
           type: string
-          description: Message text generated by Staffer's LLM.
-          maxLength: 5000
-          examples:
-            - "Thanks for connecting! Are you interested in exploring a senior backend role?"
-        metadata:
-          type: object
-          additionalProperties: true
-          description: Optional Staffer-specific context carried through delivery.
-        accountPreference:
-          type: object
-          description: Optional routing hints for account selection.
-          properties:
-            recruiterId:
-              type: string
-    MessageAccepted:
+          description: Profile picture URL
+          example: https://media.licdn.com/dms/image/...
+        headline:
+          type: string
+          description: Professional headline
+          example: Software Engineer at TechCorp
+        location:
+          type: string
+          description: Location
+          example: San Francisco, CA
+    ConversationMessageDto:
       type: object
+      required:
+        - messageId
+        - senderProfileUrl
+        - text
+        - sentAt
       properties:
         messageId:
           type: string
-          description: Identifier assigned to the message.
-        requestId:
+          description: Unique message identifier
+          example: msg_abc123
+        senderProfileUrl:
           type: string
-          description: Correlates with the original request submission.
+          description: LinkedIn profile URL of the sender
+          example: https://www.linkedin.com/in/john-doe
+        text:
+          type: string
+          description: Message text content
+          example: Hello, thanks for connecting!
+        sentAt:
+          type: string
+          description: Timestamp when message was sent
+          example: 2025-11-05T10:30:00Z
+    ConversationDto:
+      type: object
+      required:
+        - conversationId
+        - participants
+        - messages
+        - lastMessageAt
+        - unreadCount
+      properties:
+        conversationId:
+          type: string
+          description: Unique conversation identifier
+          example: conv_abc123def456
+        participants:
+          type: array
+          description: Array of participants in the conversation (excluding the provided LinkedIn account)
+          items:
+            $ref: '#/components/schemas/ParticipantProfileDto'
+        messages:
+          type: array
+          description: Array of messages in the conversation
+          items:
+            $ref: '#/components/schemas/ConversationMessageDto'
+        lastMessageAt:
+          type: string
+          description: Timestamp of the last message in the conversation
+          example: 2025-11-05T10:30:00Z
+        unreadCount:
+          type: number
+          description: Number of unread messages in the conversation
+          example: 0
+    GetMessagesResponseDto:
+      type: object
+      required:
+        - conversations
+        - page
+      properties:
+        conversations:
+          type: array
+          description: Array of conversations
+          items:
+            $ref: '#/components/schemas/ConversationDto'
+        page:
+          type: number
+          description: Current page number
+          example: 0
+    AccountStatusDto:
+      type: object
+      required:
+        - linkedinAccountId
+        - status
+        - remainingConnectionRequests
+        - remainingMessages
+        - dailyConnectionCap
+        - dailyMessageCap
+      properties:
+        linkedinAccountId:
+          type: string
+          description: LinkedIn Account identifier
+          example: acc_123456
         status:
           type: string
-          enum:
-            - queued
-            - dispatched
-        accountId:
-          type: string
-          nullable: true
-    AccountStatusResponse:
+          description: Account status (active, inactive, suspended)
+          example: active
+        remainingConnectionRequests:
+          type: number
+          description: Remaining connection requests for today
+          example: 45
+        remainingMessages:
+          type: number
+          description: Remaining messages for today
+          example: 150
+        dailyConnectionCap:
+          type: number
+          description: Daily connection request limit
+          example: 50
+        dailyMessageCap:
+          type: number
+          description: Daily message limit
+          example: 200
+    GetAccountStatusResponseDto:
       type: object
+      required:
+        - accounts
       properties:
         accounts:
           type: array
+          description: Array of account statuses
           items:
-            $ref: '#/components/schemas/AccountStatus'
-    AccountStatus:
+            $ref: '#/components/schemas/AccountStatusDto'
+    AccountLogoutDto:
       type: object
       required:
-        - accountId
-        - status
+        - linkedinAccountId
       properties:
-        accountId:
+        linkedinAccountId:
           type: string
-        status:
-          type: string
-          enum:
-            - active
-            - warning
-            - blocked
-        remainingConnectionRequests:
-          type: integer
-          minimum: 0
-          description: Remaining connection invites for the current period.
-        remainingMessages:
-          type: integer
-          minimum: 0
-        dailyConnectionCap:
-          type: integer
-          minimum: 0
-        dailyMessageCap:
-          type: integer
-          minimum: 0
-        lastUpdated:
-          type: string
-          format: date-time
-        notes:
-          type: string
-          nullable: true
-          description: Optional human-readable warning or advisory.
-    MessagesResponse:
+          description: LinkedIn Account ID to logout
+          example: acc_123456
+    AccountLogoutResponseDto:
       type: object
       required:
-        - messages
-        - page
-      properties:
-        messages:
-          type: array
-          items:
-            $ref: '#/components/schemas/GetMessagesMessage'
-          description: Collection of messages returned for the current page.
-        page:
-          type: integer
-          minimum: 0
-          description: Current page index of the returned messages.
-    MessagesNotFound:
-      type: object
-      required:
-        - messages
-      properties:
-        messages:
-          type: array
-          items: {}
-          maxItems: 0
-          description: Empty array returned when no messages are available.
-    GetMessagesMessage:
-      type: object
-      required:
-        - messageId
-        - isProvidedLinkedinAccount
-        - text
-        - sentAt
-      properties:
-        messageId:
-          type: string
-        isProvidedLinkedinAccount:
-          type: boolean
-          description: Indicates whether the message originated from a SendPilot-provided LinkedIn account.
-        text:
-          type: string
-        sentAt:
-          type: string
-          format: date-time
-    Message:
-      type: object
-      required:
-        - messageId
-        - conversationId
-        - accountId
-        - sender
-        - text
-        - sentAt
-      properties:
-        messageId:
-          type: string
-        conversationId:
-          type: string
-        accountId:
-          type: string
-        sender:
-          type: string
-          enum:
-            - candidate
-            - staffer
-        text:
-          type: string
-        sentAt:
-          type: string
-          format: date-time
-    MessageReceivedEvent:
-      type: object
-      required:
-        - eventId
-        - eventType
-        - timestamp
-        - accountId
-        - conversationId
-        - message
-      properties:
-        eventId:
-          type: string
-        eventType:
-          type: string
-          const: message.received
-        timestamp:
-          type: string
-          format: date-time
-        accountId:
-          type: string
-        conversationId:
-          type: string
-        recipientProfileId:
-          type: string
-          nullable: true
-        message:
-          $ref: '#/components/schemas/Message'
-        metadata:
-          type: object
-          additionalProperties: true
-          description: SendPilot-supplied metadata such as delivery channel or routing info.
-    ConnectLinkedInRequest:
-      type: object
-      properties:
-        email:
-          type: string
-          format: email
-          description: LinkedIn login email. Required if password is provided.
-        password:
-          type: string
-          description: LinkedIn login password. Required if email is provided.
-        accessToken:
-          type: string
-          description: LinkedIn session cookie value (`li_at`). Required when email/password are not provided.
-        premiumToken:
-          type: string
-          description: LinkedIn premium session cookie (`li_a`). Needed for Recruiter or Sales Navigator access.
-        userAgent:
-          type: string
-          description: Browser user agent string captured from a valid LinkedIn session.
-        country:
-          type: string
-          description: ISO 3166-1 alpha-2 country code describing the account locale.
-          examples:
-            - US
-            - GB
-        custom_proxy:
-          type: object
-          description: Optional proxy configuration used when routing LinkedIn traffic through a custom proxy.
-          properties:
-            protocol:
-              type: string
-              enum:
-                - https
-                - http
-                - socks5
-              description: Proxy protocol.
-            host:
-              type: string
-              description: Proxy hostname or IP address.
-            port:
-              type: integer
-              description: Proxy port.
-            username:
-              type: string
-              description: Optional username for proxy authentication.
-            password:
-              type: string
-              description: Optional password for proxy authentication.
-      anyOf:
-        - required:
-            - email
-            - password
-        - required:
-            - accessToken
-      required:
-        - userAgent
-        - country
-    ConnectLinkedInResponse:
-      type: object
+        - action
       properties:
         action:
           type: string
+          description: Action performed
+          example: account_logged_out
+    ProxyDto:
+      type: object
+      required:
+        - protocol
+        - host
+        - port
+      properties:
+        protocol:
+          type: string
+          description: Proxy protocol
           enum:
-            - account_created
-            - account_reconnected
-          description: Outcome of the connect or reconnect operation.
-        data:
-          type: object
-          properties:
-            accountId:
-              type: string
-              description: Identifier of the SendPilot-managed account associated with this LinkedIn session.
-          required:
-            - accountId
+            - https
+            - http
+            - socks5
+          example: http
+        host:
+          type: string
+          description: Proxy host address
+          example: proxy.example.com
+        port:
+          type: number
+          description: Proxy port number
+          example: 8080
+        username:
+          type: string
+          description: Optional username for proxy authentication
+          example: proxyuser
+        password:
+          type: string
+          description: Optional password for proxy authentication
+          example: proxypass
+    ConnectLinkedInDto:
+      type: object
+      required:
+        - username
+        - password
+        - userAgent
+      properties:
+        username:
+          type: string
+          description: LinkedIn username - should be either an email address or a phone number
+          example: user@example.com
+        password:
+          type: string
+          description: LinkedIn account password
+          example: securepassword123
+        userAgent:
+          type: string
+          description: User agent string - if encountering disconnection issues, enter the exact user agent of the browser on which the account has been connected
+          example: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        accessToken:
+          type: string
+          description: LinkedIn access token for authentication
+          example: AQV8...
+        premiumToken:
+          type: string
+          description: LinkedIn premium token (if applicable)
+          example: premium_token_123
+        country:
+          type: string
+          description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location
+          example: US
+        ip:
+          type: string
+          description: IPv4 address to infer proxy location
+          example: 192.168.1.1
+        proxy:
+          description: Proxy configuration
+          allOf:
+            - $ref: '#/components/schemas/ProxyDto'
+    ConnectLinkedInResponseDto:
+      type: object
       required:
         - action
         - data
-      examples:
-        - action: account_created
-          data:
-            accountId: acc_sendpilot_001
-    ConnectLinkedInError:
-      type: object
       properties:
         action:
           type: string
-          description: Error identifier for the failed connect or reconnect attempt.
-          enum:
-            - errors/invalid_parameters
-            - errors/malformed_request
-            - errors/content_too_large
-            - errors/invalid_url
-            - errors/too_many_characters
-            - errors/unescaped_characters
-            - errors/missing_parameters
-            - errors/invalid_credentials
-            - errors/account_restricted
-            - errors/account_mismatch
-            - errors/insufficient_permissions
-            - errors/session_mismatch
-            - errors/feature_not_subscribed
-            - errors/subscription_required
-            - errors/unknown_authentication_context
-            - errors/action_required
-            - errors/resource_access_restricted
-            - errors/proxy_auth_error
-            - errors/request_timeout
-            - errors/operation_canceled
-            - errors/already_exists
-            - errors/auth_in_progress
-            - errors/unexpected_error
-            - errors/provider_error
-            - errors/authentication_intent_error
+          description: Action performed
+          example: account_connected
+        data:
+          type: object
+          description: Account data - linkedinAccountId is the LinkedIn account database ID to use for messaging
+          example:
+            linkedinAccountId: clxxx123456
+    ReconnectLinkedInDto:
+      type: object
+      required:
+        - linkedinAccountId
+        - username
+        - password
+        - userAgent
+      properties:
+        linkedinAccountId:
+          type: string
+          description: LinkedIn Account ID to reconnect
+          example: clxxx123456
+        username:
+          type: string
+          description: LinkedIn username - should be either an email address or a phone number
+          example: user@example.com
+        password:
+          type: string
+          description: LinkedIn account password
+          example: securepassword123
+        userAgent:
+          type: string
+          description: User agent string - if encountering disconnection issues, enter the exact user agent of the browser on which the account has been connected
+          example: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
+        accessToken:
+          type: string
+          description: LinkedIn access token for authentication
+          example: AQV8...
+        premiumToken:
+          type: string
+          description: LinkedIn premium token (if applicable)
+          example: premium_token_123
+        country:
+          type: string
+          description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location
+          example: US
+        ip:
+          type: string
+          description: IPv4 address to infer proxy location
+          example: 192.168.1.1
+        proxy:
+          description: Proxy configuration
+          allOf:
+            - $ref: '#/components/schemas/ProxyDto'
+    ReconnectLinkedInResponseDto:
+      type: object
       required:
         - action
-    ErrorResponse:
-      type: object
+        - data
       properties:
-        error:
+        action:
           type: string
-          description: Error code or identifier.
-        message:
+          description: Action performed
+          example: account_reconnected
+        data:
+          type: object
+          description: Account data - linkedinAccountId is the LinkedIn account database ID
+          example:
+            linkedinAccountId: clxxx123456
+    RegisterWebhookDto:
+      type: object
+      required:
+        - url
+        - events
+      properties:
+        url:
           type: string
-          description: Human-readable explanation of the error.
-        retryAfterSeconds:
-          type: integer
-          minimum: 0
-          description: Present when the error is rate-limit related.
-  responses:
-    BadRequestError:
-      description: Invalid payload or missing fields.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    UnauthorizedError:
-      description: Authentication failed or credentials missing.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    RateLimitError:
-      description: Rate limit exceeded.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    ServerError:
-      description: Internal error from SendPilot infrastructure.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-
+          description: Webhook URL to receive events
+          example: https://your-app.com/webhooks/sendpilot
+        secret:
+          type: string
+          description: Webhook secret for signature verification
+          example: your_webhook_secret_123
+        events:
+          type: array
+          description: 'List of event types to subscribe to. Accepts both formats: UPPERCASE_UNDERSCORE (MESSAGE_RECEIVED) or lowercase.dot (message.received). Use * for all events.'
+          items:
+            type: string
+          example:
+            - MESSAGE_RECEIVED
+            - CONNECTION_ACCEPTED
+            - ACCOUNT_DISCONNECTED
+    RegisterWebhookResponseDto:
+      type: object
+      required:
+        - status
+        - url
+      properties:
+        status:
+          type: string
+          description: Status of webhook registration
+          example: registered
+        url:
+          type: string
+          description: Registered webhook URL
+          example: https://your-app.com/webhooks/sendpilot
+    UnregisterWebhookDto:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          description: Webhook URL to unregister
+          example: https://your-app.com/webhooks/sendpilot
+    UnregisterWebhookResponseDto:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: Status of webhook unregistration
+          example: unregistered
+    ListWebhooksResponseDto:
+      type: object
+      required:
+        - webhooks
+      properties:
+        webhooks:
+          type: array
+          description: List of registered webhooks
+          items:
+            type: object

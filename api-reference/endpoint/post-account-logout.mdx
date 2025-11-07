@@ -1,69 +1,152 @@
 ---
 title: "Logout Account"
-api: "POST /account/logout"
-description: "Disconnect a SendPilot-managed LinkedIn account"
+api: "POST /accounts/logout"
+description: "Logout and disconnect a LinkedIn account from SendPilot"
 tags:
   - accounts
 ---
 
-Trigger a managed account logout. Use this endpoint to invalidate the active LinkedIn session while keeping the account record for future reconnect attempts.
+Trigger a managed account logout. Use this endpoint to invalidate the active LinkedIn session and disconnect the account from SendPilot.
 
 ## Request Body
 
-<ParamField body="accountId" type="string" required>
-  SendPilot-managed account identifier to disconnect.
+<ParamField body="linkedinAccountId" type="string" required>
+  LinkedIn Account ID to logout.
+  
+  Example: `acc_123456`
 </ParamField>
 
 ## Response
 
 <ResponseField name="action" type="string" required>
-  Operation outcome. Returns `disconnected` when the account session is terminated or `failed/not_found` if the account cannot be located.
+  Action performed. Returns `account_logged_out` when the account is successfully disconnected.
 </ResponseField>
 
 ## Example Request
 
 ```bash
-curl -X POST "https://api.sendpilot.example.com/account/logout" \
-  -H "X-API-KEY: YOUR_API_KEY" \
+curl -X POST "https://api.sendpilot.example.com/accounts/logout" \
+  -H "x-user-id: YOUR_USER_ID" \
+  -H "x-project-id: YOUR_PROJECT_ID" \
+  -H "x-environment: production" \
   -H "Content-Type: application/json" \
   -d '{
-    "accountId": "acc_sendpilot_001"
+    "linkedinAccountId": "acc_123456"
   }'
 ```
 
-## Example Responses
-
-<Expandable title="Successful logout">
+## Example Response
 
 ```json
 {
-  "action": "disconnected"
+  "action": "account_logged_out"
 }
 ```
 
-</Expandable>
+## When to Use Logout
 
-<Expandable title="Account not found">
+Use the logout endpoint when you need to:
+- **Disconnect an account**: Remove a LinkedIn account from active use
+- **Security concerns**: Immediately invalidate sessions for security reasons
+- **Account rotation**: Cycle through different accounts in your pool
+- **Maintenance**: Temporarily disable an account for updates
 
-```json
-{
-  "action": "failed/not_found"
-}
-```
+<Warning>
+Logging out an account will stop all active campaigns using that account. Messages and connection requests in progress may fail.
+</Warning>
 
-</Expandable>
+## Effects of Logout
+
+When you logout an account:
+1. The active LinkedIn session is invalidated
+2. All scheduled messages and connection requests using this account are paused
+3. The account status changes to "disconnected"
+4. You'll receive an `account.disconnected` webhook event
+
+## Reconnecting After Logout
+
+After logout, you can reconnect the account using:
+- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) - Restore access with updated credentials
 
 ## Common Errors
 
 | Status | Error | Description |
 |--------|-------|-------------|
-| 400 | `invalid_account_id` | The provided account ID is malformed |
-| 404 | `account_not_found` | Account does not exist or is already removed |
-| 409 | `account_already_disconnected` | Account session is already disconnected |
-| 500 | `unexpected_error` | Internal failure while processing logout |
+| 200 | Success | Account logged out successfully |
+| 400 | `Invalid request data` | The provided account ID is malformed or missing |
+| 401 | `Invalid or missing API key` | API authentication failed |
+
+## Workflow Example
+
+```javascript
+async function logoutAccount(linkedinAccountId) {
+  const response = await fetch('https://api.sendpilot.example.com/accounts/logout', {
+    method: 'POST',
+    headers: {
+      'x-user-id': YOUR_USER_ID,
+      'x-project-id': YOUR_PROJECT_ID,
+      'x-environment': 'production',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      linkedinAccountId
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Logout failed: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  console.log('Account logged out:', result.action);
+  return result;
+}
+
+// Usage with campaign pause
+async function safelyLogoutAccount(linkedinAccountId) {
+  // Pause campaigns using this account
+  await pauseCampaignsForAccount(linkedinAccountId);
+  
+  // Logout the account
+  await logoutAccount(linkedinAccountId);
+  
+  // Update internal tracking
+  await updateAccountStatus(linkedinAccountId, 'disconnected');
+}
+```
+
+## Best Practices
+
+<Tip>
+Pause all active campaigns before logging out an account to prevent message delivery failures.
+</Tip>
+
+- Check for active campaigns before logout
+- Implement graceful shutdown for pending operations
+- Update your internal tracking immediately after logout
+- Set up webhooks to monitor disconnection events
+- Document logout reasons for future reference
+
+## Account Lifecycle Management
+
+### Planned Logout
+For scheduled maintenance or rotation:
+1. Check account status
+2. Pause active campaigns
+3. Wait for pending operations to complete
+4. Execute logout
+5. Update internal records
+
+### Emergency Logout
+For security incidents:
+1. Execute logout immediately
+2. Audit recent account activity
+3. Update security protocols
+4. Review and rotate credentials
+5. Reconnect with enhanced security
 
 ## See Also
 
-- [Get Account Status](/api-reference/endpoint/get-account-status) — Verify the resulting status and quotas.
-- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) — Restore access after a logout.
-
+- [Get Account Status](/api-reference/endpoint/get-account-status) - Verify the resulting status
+- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) - Restore access after logout
+- [Account Disconnected Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-status) - Monitor disconnection events

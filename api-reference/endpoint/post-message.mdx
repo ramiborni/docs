@@ -1,35 +1,51 @@
 ---
 title: "Send Message"
-api: "POST /message"
-description: "Start or continue a conversation through a managed account in the SendPilot pool"
+api: "POST /messaging/message"
+description: "Send a message to a LinkedIn connection with optional text, attachments, voice, or video"
 ---
 
-Send a message through a connected account managed by SendPilot. The endpoint supports plain text, HTML-enhanced copy, file attachments, and rich media for supported channels.
+Send a message through a connected account managed by SendPilot. The endpoint supports plain text, file attachments, voice messages, and video messages.
 
 ## Request Body
 
-<ParamField body="accountId" type="string" required>
-  LinkedIn-provided account identifier. Must contain at least one character.
+<ParamField body="linkedinAccountId" type="string" required>
+  LinkedIn account ID (use the `linkedinAccountId` returned from the connect LinkedIn endpoint).
+  
+  Example: `clxxx123456`
 </ParamField>
 
 <ParamField body="text" type="string">
-  Body of the outbound message. Supports LinkedIn Recruiter-safe HTML tags: `<strong>`, `<em>`, `<a href="https://www.example.com">`, `<ul>`, `<ol>`, and `<li>`. Tags can be nested as needed.
-</ParamField>
-
-<ParamField body="attachments" type="array<FileUpload>">
-  Collection of files to send alongside the message. Use for documents, images, or other supported media.
-</ParamField>
-
-<ParamField body="voiceMessage" type="FileUpload">
-  (WhatsApp & LinkedIn) Audio file to transmit as a voice note. LinkedIn works best with `.m4a` format. For Instagram and Telegram voice content, use the `attachments` collection.
-</ParamField>
-
-<ParamField body="videoMessage" type="FileUpload">
-  (LinkedIn) Video file to deliver as a rich media message.
+  Message text content.
+  
+  Example: `Hi! I wanted to reach out about...`
 </ParamField>
 
 <ParamField body="leadUrl" type="string">
-  URL for the lead the message targets. Typically a LinkedIn profile link.
+  LinkedIn profile URL of the lead to send message to.
+  
+  Example: `https://www.linkedin.com/in/john-doe`
+</ParamField>
+
+<ParamField body="attachments" type="array<FileUpload>">
+  File attachments to include with the message.
+  
+  <Expandable title="FileUpload object">
+    <ParamField body="fileId" type="string" required>
+      Unique file identifier.
+    </ParamField>
+    
+    <ParamField body="filename" type="string" required>
+      Original filename.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ParamField body="voiceMessage" type="FileUpload">
+  Voice message attachment. Use `.m4a` format for best compatibility with LinkedIn.
+</ParamField>
+
+<ParamField body="videoMessage" type="FileUpload">
+  Video message attachment for LinkedIn.
 </ParamField>
 
 ## Response
@@ -40,20 +56,57 @@ Send a message through a connected account managed by SendPilot. The endpoint su
 
 ## Example Request
 
+### Text Message
+
 ```bash
-curl -X POST https://api.sendpilot.example.com/message \
-  -H "X-API-KEY: YOUR_API_KEY" \
+curl -X POST https://api.sendpilot.example.com/messaging/message \
+  -H "x-user-id: YOUR_USER_ID" \
+  -H "x-project-id: YOUR_PROJECT_ID" \
+  -H "x-environment: production" \
   -H "Content-Type: application/json" \
   -d '{
-    "accountId": "acc_li_789",
-    "leadUrl": "https://www.linkedin.com/in/alex-example/",
-    "text": "<strong>Hi Alex</strong>, we'd love to chat about a Staff Engineer role at SendPilot.",
+    "linkedinAccountId": "clxxx123456",
+    "leadUrl": "https://www.linkedin.com/in/john-doe",
+    "text": "Hi John, I wanted to reach out about a great opportunity at our company."
+  }'
+```
+
+### Message with Attachments
+
+```bash
+curl -X POST https://api.sendpilot.example.com/messaging/message \
+  -H "x-user-id: YOUR_USER_ID" \
+  -H "x-project-id: YOUR_PROJECT_ID" \
+  -H "x-environment: production" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "linkedinAccountId": "clxxx123456",
+    "leadUrl": "https://www.linkedin.com/in/john-doe",
+    "text": "Here is more information about the opportunity.",
     "attachments": [
       {
-        "fileId": "file_cv_123",
-        "filename": "SendPilot_Opportunity.pdf"
+        "fileId": "file_abc123",
+        "filename": "Job_Description.pdf"
       }
     ]
+  }'
+```
+
+### Voice Message
+
+```bash
+curl -X POST https://api.sendpilot.example.com/messaging/message \
+  -H "x-user-id: YOUR_USER_ID" \
+  -H "x-project-id: YOUR_PROJECT_ID" \
+  -H "x-environment: production" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "linkedinAccountId": "clxxx123456",
+    "leadUrl": "https://www.linkedin.com/in/john-doe",
+    "voiceMessage": {
+      "fileId": "file_voice_123",
+      "filename": "intro_message.m4a"
+    }
   }'
 ```
 
@@ -70,24 +123,24 @@ curl -X POST https://api.sendpilot.example.com/message \
 Messages are delivered asynchronously. A `201` status confirms the message was accepted by SendPilot for dispatch; final delivery is confirmed via webhooks or polling message history.
 
 <Info>
-Use the [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) to capture replies and delivery updates, including metadata about attendees and attachments.
+Use the [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) to capture replies and delivery updates.
 </Info>
 
 ## Best Practices
 
 <Tip>
-  **Maintain context**: Always use `conversationId` when available to ensure message continuity and proper threading.
+  **Maintain context**: Always provide `leadUrl` to ensure proper message threading and continuity.
 </Tip>
 
 - Combine `text` and `attachments` to deliver richer outreach while respecting channel limits
-- Keep HTML markup minimal; LinkedIn strips unsupported tags
 - Prefer `.m4a` files for LinkedIn voice notes to avoid transcoding issues
 - Validate `leadUrl` before submission to prevent malformed request errors
 - Ensure attachments comply with platform size and type restrictions
+- Keep messages personalized and relevant to increase engagement rates
 
 ## Conversation Context
 
-**New conversations**: Provide `text`, rich media, or attachments alongside `leadUrl` to initiate outreach. SendPilot handles thread creation and returns identifiers via webhook events.
+**New conversations**: Provide `text`, rich media, or attachments alongside `leadUrl` to initiate outreach. SendPilot handles thread creation.
 
 **Existing conversations**: Include the `leadUrl` associated with the active conversation to maintain continuity across follow-ups.
 
@@ -95,20 +148,56 @@ Use the [Message Received Webhook](/api-reference/endpoint/post-webhooks-message
 
 | Status | Error | Description |
 |--------|-------|-------------|
-| 201 | `action: message_sent` | Message accepted for processing |
-| 400 | `errors/invalid_parameters`, `errors/malformed_request`, `errors/content_too_large`, `errors/invalid_url`, `errors/too_many_characters`, `errors/unescaped_characters`, `errors/missing_parameters` | Payload validation failed |
-| 401 | `errors/missing_credentials`, `errors/multiple_sessions`, `errors/invalid_checkpoint_solution`, `errors/invalid_proxy_credentials`, `errors/checkpoint_error`, `errors/invalid_credentials`, `errors/expired_credentials`, `errors/insufficient_privileges`, `errors/disconnected_account`, `errors/disconnected_feature`, `errors/invalid_credentials_but_valid_account_imap`, `errors/expired_link`, `errors/wrong_account`, `errors/captcha_not_supported` | Authentication or session problem preventing delivery |
-| 404 | `errors/resource_not_found`, `errors/invalid_resource_identifier` | Conversation, account, or lead reference could not be resolved |
-| 415 | `errors/unsupported_media_type` | Attachment or media format is not supported |
-| 422 | `errors/invalid_account`, `errors/invalid_recipient`, `errors/no_connection_with_recipient`, `errors/blocked_recipient`, `errors/user_unreachable`, `errors/unprocessable_entity`, `errors/action_already_performed`, `errors/invalid_message`, `errors/invalid_post`, `errors/not_allowed_inmail`, `errors/insufficient_credits`, `errors/cannot_resend_yet`, `errors/cannot_resend_within_24hrs`, `errors/limit_exceeded`, `errors/already_invited_recently`, `errors/already_connected`, `errors/cannot_invite_attendee`, `errors/parent_mail_not_found`, `errors/invalid_reply_subject`, `errors/invalid_headers`, `errors/send_as_denied`, `errors/invalid_folder`, `errors/invalid_thread`, `errors/limit_too_high`, `errors/unauthorized`, `errors/sender_rejected`, `errors/recipient_rejected`, `errors/ip_rejected_by_server`, `errors/provider_unreachable`, `errors/account_configuration_error`, `errors/cant_send_message`, `errors/realtime_client_not_initialized`, `errors/comments_disabled`, `errors/insufficient_job_slot` | Request could not be processed due to account, recipient, or platform constraints |
-| 429 | `errors/too_many_requests` | Request throttled by rate limits |
-| 500 | `errors/unexpected_error`, `errors/provider_error`, `errors/authentication_intent_error` | Internal or upstream provider failure |
-| 503 | `errors/no_client_session`, `errors/no_channel`, `errors/no_handler`, `errors/network_down`, `errors/service_unavailable` | Temporary infrastructure outage |
-| 504 | `errors/request_timeout` | Provider did not respond before timeout |
+| 201 | Success | Message accepted for processing |
+| 400 | `Invalid request data` | Payload validation failed |
+| 401 | `Invalid or missing API key` | Authentication or session problem preventing delivery |
+
+## Message Types
+
+### Text Messages
+Plain text content sent to a LinkedIn connection. Supports basic formatting.
+
+### File Attachments
+Documents, PDFs, images, and other file types. Each attachment must include:
+- `fileId`: Unique identifier for the file
+- `filename`: Original filename with extension
+
+### Voice Messages
+Audio messages sent as voice notes. LinkedIn works best with `.m4a` format. For other platforms (Instagram, Telegram), use the `attachments` array.
+
+### Video Messages
+Video files delivered as rich media messages on LinkedIn.
+
+## Workflow Example
+
+```javascript
+async function sendMessage(linkedinAccountId, leadUrl, messageText) {
+  const response = await fetch('https://api.sendpilot.example.com/messaging/message', {
+    method: 'POST',
+    headers: {
+      'x-user-id': YOUR_USER_ID,
+      'x-project-id': YOUR_PROJECT_ID,
+      'x-environment': 'production',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      linkedinAccountId,
+      leadUrl,
+      text: messageText
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to send message: ${response.statusText}`);
+  }
+
+  const result = await response.json();
+  console.log('Message sent:', result.action);
+  return result;
+}
+```
 
 ## See Also
 
 - [Get Messages](/api-reference/endpoint/get-messages) - Poll for message history
 - [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) - Receive inbound messages with conversation context
-- [Account Pools](/operations/account-pools) - Understand account routing
-

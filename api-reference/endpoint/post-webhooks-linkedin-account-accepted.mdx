@@ -1,23 +1,26 @@
 ---
-title: "LinkedIn Connection Accepted Webhook "
+title: "LinkedIn Connection Accepted Webhook"
 api: "POST /webhooks/linkedin/account-accepted"
-description: "Proposed webhook payload emitted when a LinkedIn connection invitation is accepted"
+description: "Webhook payload emitted when a LinkedIn connection invitation is accepted"
 tags:
   - webhooks
   - accounts
-  - proposed
 ---
 
 Receive events when a previously invited LinkedIn contact accepts a connection request managed by SendPilot.
 
-<Info>
-This webhook is **proposed**. Field names, payload structure, and event lifecycle may change prior to launch.
-</Info>
+## Event Type
 
-## Proposed Webhook Event
+`CONNECTION_ACCEPTED` (or `connection.accepted`)
+
+**Triggered when:** A LinkedIn connection request is accepted (30 seconds to 2 hours delay in sandbox)
+
+## Webhook Event Payload
 
 <ParamField body="eventId" type="string" required>
   Unique identifier for the webhook delivery. Use this for idempotency checks.
+  
+  Example: `evt_conn_accepted_1699358400000`
 </ParamField>
 
 <ParamField body="eventType" type="string" required>
@@ -26,63 +29,151 @@ This webhook is **proposed**. Field names, payload structure, and event lifecycl
 
 <ParamField body="timestamp" type="string" required>
   ISO-8601 timestamp when SendPilot detected the acceptance.
-</ParamField>
-
-<ParamField body="accountId" type="string" required>
-  SendPilot-managed LinkedIn account that sent the original invitation.
-</ParamField>
-
-<ParamField body="connection" type="object" required>
-  Details about the newly connected LinkedIn member.
   
-  <Expandable title="Connection object">
-    <ParamField body="profileId" type="string" required>
-      LinkedIn profile identifier for the new connection.
+  Example: `2025-11-07T10:00:00.000Z`
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Event data containing connection details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      SendPilot-managed LinkedIn account that sent the original invitation.
+      
+      Example: `clxxx123456`
     </ParamField>
     
-    <ParamField body="name" type="string" required>
-      Display name of the new connection.
+    <ParamField body="leadProfileUrl" type="string" required>
+      LinkedIn profile URL of the lead who accepted the connection.
+      
+      Example: `https://www.linkedin.com/in/jane-smith`
     </ParamField>
     
-    <ParamField body="profileUrl" type="string">
-      Public LinkedIn profile URL.
+    <ParamField body="connectionNote" type="string">
+      The original connection note that was sent with the request.
+      
+      Example: `Hi Jane, I'd love to connect with you!`
     </ParamField>
     
-    <ParamField body="profileImageUrl" type="string">
-      Profile image URL if available.
+    <ParamField body="originalRequestId" type="string" required>
+      ID of the original connection request.
+      
+      Example: `req_abc123`
+    </ParamField>
+    
+    <ParamField body="acceptedAt" type="string" required>
+      ISO-8601 timestamp when the connection was accepted.
+      
+      Example: `2025-11-07T10:00:00.000Z`
     </ParamField>
   </Expandable>
 </ParamField>
 
-## Proposed Webhook Payload Example
+## Example Webhook Payload
 
 ```json
 {
-  "eventId": "evt_01j0accept123",
+  "eventId": "evt_conn_accepted_1699358400000",
   "eventType": "connection.accepted",
-  "timestamp": "2025-01-05T11:15:32Z",
-  "accountId": "acc_sendpilot_001",
-  "connection": {
-    "profileId": "urn:li:member:987654321",
-    "name": "Jamie Rivers",
-    "profileUrl": "https://www.linkedin.com/in/jamie-rivers/",
-    "profileImageUrl": "https://media.licdn.com/dms/image/D4D35AQHBcL0QXkQZ1g/profile-displayphoto-shrink_400_400/0/1705000000000"
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "leadProfileUrl": "https://www.linkedin.com/in/jane-smith",
+    "connectionNote": "Hi Jane, I'd love to connect with you!",
+    "originalRequestId": "req_abc123",
+    "acceptedAt": "2025-11-07T10:00:00.000Z"
   }
 }
 ```
 
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
+
 ## Handling the Webhook
 
-1. **Verify signature** with the `X-SendPilot-Signature` header, mirroring other SendPilot webhooks.
-2. **Enforce idempotency** using `eventId` before persisting the new connection.
-3. **Update CRM or ATS records** to reflect the newly connected relationship.
-4. **Trigger onboarding workflows** for the member if your automation requires next steps.
+1. **Verify signature** with the `X-SendPilot-Signature` header
+2. **Enforce idempotency** using `eventId` before persisting the new connection
+3. **Update CRM or ATS records** to reflect the newly connected relationship
+4. **Trigger onboarding workflows** for the member if your automation requires next steps
 
 <Warning>
 Acknowledge receipt with `200 OK` after queuing the event for processing. Respond with `5xx` only when you need SendPilot to retry delivery.
 </Warning>
 
-## See Also
+## Implementation Example
 
-- [Send Connection Request](/api-reference/endpoint/post-connection-request) — Initiate invitations via API
-- [LinkedIn Account Status Webhook ](/api-reference/endpoint/post-webhooks-linkedin-account-status) — Monitor account connectivity changes
+```javascript
+app.post('/webhooks/linkedin/account-accepted', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  // 1. Verify webhook signature
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  // 2. Check for duplicate events
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ received: true });
+  }
+  
+  // 3. Process the connection acceptance
+  try {
+    await db.connections.create({
+      eventId: event.eventId,
+      accountId: event.data.accountId,
+      leadProfileUrl: event.data.leadProfileUrl,
+      connectionNote: event.data.connectionNote,
+      originalRequestId: event.data.originalRequestId,
+      acceptedAt: new Date(event.data.acceptedAt)
+    });
+    
+    // Update lead status in CRM
+    await updateLeadStatus(event.data.leadProfileUrl, 'connected');
+    
+    // Trigger follow-up workflow
+    await triggerFollowUpWorkflow(event.data.accountId, event.data.leadProfileUrl);
+    
+    // Mark event as processed
+    await markEventProcessed(event.eventId);
+    
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+## Retry Behavior
+
+SendPilot implements automatic retries for failed webhook deliveries:
+
+- **Retry on**: 5xx errors, network timeouts
+- **No retry on**: 2xx, 4xx responses
+- **Retry schedule**: Exponential backoff (1s, 5s, 30s, 5m, 30m)
+- **Max attempts**: 5
+
+## Best Practices
+
+<Tip>
+Use connection acceptance events to automatically trigger follow-up messages or update your lead scoring in real-time.
+</Tip>
+
+- Implement idempotency using `eventId` to prevent duplicate processing
+- Verify webhook signatures to ensure authenticity
+- Process webhooks asynchronously for better performance
+- Update your CRM/ATS immediately when connections are accepted
+- Consider triggering automated follow-up sequences
+
