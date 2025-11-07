@@ -8,7 +8,7 @@ The SendPilot LinkedIn Integration API enables you to programmatically send Link
 ## Base URL
 
 ```
-https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account
+https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin
 ```
 
 ## Endpoints
@@ -45,7 +45,7 @@ X-API-KEY: YOUR_API_KEY
 ### Example Request
 
 ```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message \
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
   -H "X-API-KEY: YOUR_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
@@ -124,7 +124,7 @@ Official SDKs coming soon. For now, use standard HTTP clients:
 ```javascript
 // Node.js example
 const sendMessage = async (linkedinAccountId, leadUrl, text) => {
-  const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account/messaging/message', {
+  const response = await fetch('https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message', {
     method: 'POST',
     headers: {
       'X-API-KEY': process.env.SENDPILOT_API_KEY,
