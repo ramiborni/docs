@@ -4,15 +4,7 @@ openapi: "GET /webhooks/list"
 description: "Get all registered webhook URLs for your account"
 ---
 
-Retrieve all registered webhook URLs for your account. Webhooks are account-based (per user) and support both Clerk authentication (Bearer token) and API Key authentication.
-
-## Query Parameters
-
-<ParamField query="environment" type="string">
-  Environment (sandbox or production). Use different API keys for different environments.
-  
-  Values: `sandbox` | `production`
-</ParamField>
+Retrieve all registered webhook URLs for your account. Requires X-API-KEY authentication.
 
 ## Response
 

@@ -221,22 +221,12 @@ paths:
   /webhooks/register:
     post:
       summary: Register a webhook URL
-      description: Register a webhook URL to receive event notifications from SendPilot. Webhooks are account-based (per user). Supports both Clerk authentication (Bearer token) and API Key authentication (x-user-id, x-project-id, x-environment headers)
+      description: Register a webhook URL to receive event notifications from SendPilot. Requires X-API-KEY authentication.
       operationId: WebhooksController_registerWebhook
       tags:
         - Webhooks
       security:
         - apiKey: []
-      parameters:
-        - name: environment
-          required: false
-          in: query
-          description: Environment (sandbox or production) - required when using Clerk authentication, optional when using API Key authentication (uses x-environment header)
-          schema:
-            type: string
-            enum:
-              - sandbox
-              - production
       requestBody:
         required: true
         description: Webhook registration details
@@ -258,22 +248,12 @@ paths:
   /webhooks/unregister:
     delete:
       summary: Unregister a webhook URL
-      description: Remove a webhook URL from receiving event notifications. Webhooks are account-based (per user). Supports both Clerk authentication (Bearer token) and API Key authentication (x-user-id, x-project-id, x-environment headers)
+      description: Remove a webhook URL from receiving event notifications. Requires X-API-KEY authentication.
       operationId: WebhooksController_unregisterWebhook
       tags:
         - Webhooks
       security:
         - apiKey: []
-      parameters:
-        - name: environment
-          required: false
-          in: query
-          description: Environment (sandbox or production) - required when using Clerk authentication, optional when using API Key authentication (uses x-environment header)
-          schema:
-            type: string
-            enum:
-              - sandbox
-              - production
       requestBody:
         required: true
         description: Webhook unregistration details
@@ -295,22 +275,12 @@ paths:
   /webhooks/list:
     get:
       summary: List registered webhooks
-      description: Get all registered webhook URLs for your account. Webhooks are account-based (per user). Supports both Clerk authentication (Bearer token) and API Key authentication (x-user-id, x-project-id, x-environment headers)
+      description: Get all registered webhook URLs for your account. Requires X-API-KEY authentication.
       operationId: WebhooksController_listWebhooks
       tags:
         - Webhooks
       security:
         - apiKey: []
-      parameters:
-        - name: environment
-          required: false
-          in: query
-          description: Environment (sandbox or production) - required when using Clerk authentication, optional when using API Key authentication (uses x-environment header)
-          schema:
-            type: string
-            enum:
-              - sandbox
-              - production
       responses:
         '200':
           description: List of registered webhooks
@@ -376,11 +346,16 @@ components:
       type: object
       required:
         - linkedinAccountId
+        - leadUrl
       properties:
         linkedinAccountId:
           type: string
           description: LinkedIn account ID (use the linkedinAccountId returned from the connect LinkedIn endpoint)
           example: clxxx123456
+        leadUrl:
+          type: string
+          description: LinkedIn profile URL of the lead to send message to (required)
+          example: https://www.linkedin.com/in/john-doe
         text:
           type: string
           description: Message text content
@@ -398,10 +373,6 @@ components:
           description: Video message attachment
           allOf:
             - $ref: '#/components/schemas/FileUploadDto'
-        leadUrl:
-          type: string
-          description: LinkedIn profile URL of the lead to send message to
-          example: https://www.linkedin.com/in/john-doe
     SendMessageResponseDto:
       type: object
       required:
