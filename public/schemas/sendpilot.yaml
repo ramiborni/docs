@@ -5,7 +5,7 @@ info:
   version: "1.0"
   contact: {}
 servers:
-  - url: https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/account
+  - url: https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin
     description: Production and Sandbox server
 tags:
   - name: Messaging
@@ -14,6 +14,8 @@ tags:
     description: Account management and authentication
   - name: Webhooks
     description: Webhook configuration and management
+security:
+  - apiKey: []
 paths:
   /messaging/connection-request:
     post:
@@ -163,7 +165,7 @@ paths:
   /accounts/connect-linkedin:
     post:
       summary: Connect LinkedIn account
-      description: Connect a LinkedIn account to SendPilot using credentials or tokens
+      description: Connect a LinkedIn account to SendPilot. You can authenticate using either username/password credentials or LinkedIn access tokens.
       operationId: AccountsController_connectLinkedIn
       tags:
         - Accounts
@@ -601,17 +603,15 @@ components:
     ConnectLinkedInDto:
       type: object
       required:
-        - username
-        - password
         - userAgent
       properties:
         username:
           type: string
-          description: LinkedIn username - should be either an email address or a phone number
+          description: (Optional) LinkedIn username - should be either an email address or a phone number. Can be used instead of access tokens for authentication.
           example: user@example.com
         password:
           type: string
-          description: LinkedIn account password
+          description: (Optional) LinkedIn account password. Can be used instead of access tokens for authentication.
           example: securepassword123
         userAgent:
           type: string

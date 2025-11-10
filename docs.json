@@ -53,13 +53,5 @@
       }
     ]
   },
-  "openapi": "/schemas/sendpilot.yaml",
-  "api": {
-    "mdx": {
-      "auth": {
-        "method": "key",
-        "name": "x-api-key"
-      }
-    }
-  }
+  "openapi": "/schemas/sendpilot.yaml"
 }
