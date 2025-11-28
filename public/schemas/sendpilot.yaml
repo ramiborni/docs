@@ -47,7 +47,7 @@ paths:
   /messaging/message:
     post:
       summary: Send a LinkedIn message
-      description: Send a message to a LinkedIn connection with optional text, attachments, voice, or video
+      description: Send a message to a LinkedIn connection
       operationId: MessagingController_sendMessage
       tags:
         - Messaging
@@ -500,20 +500,6 @@ components:
           type: string
           description: Action performed
           example: connection_request_sent
-    FileUploadDto:
-      type: object
-      required:
-        - fileId
-        - filename
-      properties:
-        fileId:
-          type: string
-          description: Unique file identifier
-          example: file_abc123
-        filename:
-          type: string
-          description: Original filename
-          example: document.pdf
     SendMessageDto:
       type: object
       required:
@@ -531,19 +517,6 @@ components:
           type: string
           description: LinkedIn profile URL of the lead to send message to
           example: https://www.linkedin.com/in/john-doe
-        attachments:
-          type: array
-          description: File attachments to include with the message
-          items:
-            $ref: '#/components/schemas/FileUploadDto'
-        voiceMessage:
-          description: Voice message attachment
-          allOf:
-            - $ref: '#/components/schemas/FileUploadDto'
-        videoMessage:
-          description: Video message attachment
-          allOf:
-            - $ref: '#/components/schemas/FileUploadDto'
     SendMessageResponseDto:
       type: object
       required:

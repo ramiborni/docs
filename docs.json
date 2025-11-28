@@ -63,8 +63,7 @@
           "api-reference/endpoint/post-webhooks-connection-rejected",
           "api-reference/endpoint/post-webhooks-linkedin-account-status",
           "api-reference/endpoint/post-webhooks-account-connected",
-          "api-reference/endpoint/post-webhooks-account-deleted",
-          "api-reference/endpoint/post-webhooks-profile-viewed"
+          "api-reference/endpoint/post-webhooks-account-deleted"
         ]
       }
     ]

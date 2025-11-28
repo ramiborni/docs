@@ -6,22 +6,18 @@ tags:
   - accounts
 ---
 
-Register a LinkedIn session with SendPilot or refresh credentials for an existing managed account. Use:
-- `POST /accounts/connect-linkedin` when onboarding a brand-new LinkedIn profile.
-- `POST /accounts/reconnect-linkedin` when updating credentials or restoring access for a previously connected profile.
-
-Both endpoints accept the same payload and return the same response format.
+Register a LinkedIn session with SendPilot. Use this endpoint when onboarding a brand-new LinkedIn profile.
 
 ## Request Body
 
-<ParamField body="username" type="string" required>
-  LinkedIn username - should be either an email address or a phone number.
+<ParamField body="username" type="string">
+  LinkedIn username - should be either an email address or a phone number. Optional, but if provided, password must also be provided.
   
   Example: `user@example.com`
 </ParamField>
 
-<ParamField body="password" type="string" required>
-  LinkedIn account password.
+<ParamField body="password" type="string">
+  LinkedIn account password. Required only if username is provided.
   
   Example: `securepassword123`
 </ParamField>
@@ -33,21 +29,21 @@ Both endpoints accept the same payload and return the same response format.
 </ParamField>
 
 <ParamField body="accessToken" type="string">
-  LinkedIn access token for authentication (alternative to username/password).
+  LinkedIn access token for authentication (alternative to username/password). Optional, but required if premiumToken is provided.
   
   Example: `AQV8...`
 </ParamField>
 
 <ParamField body="premiumToken" type="string">
-  LinkedIn premium token (if applicable).
+  LinkedIn premium token. Optional, but if provided, accessToken must also be provided.
   
   Example: `premium_token_123`
 </ParamField>
 
-<ParamField body="country" type="string">
-  ISO 3166-1 A-2 country code (2 characters) to be set as proxy location.
+<ParamField body="country" type="string" required>
+  ISO 3166-1 A-2 country code (2 characters) to be set as proxy location. Case-insensitive (e.g., "US" or "us" both work).
   
-  Example: `US`
+  Example: `us`
 </ParamField>
 
 <ParamField body="ip" type="string">
@@ -57,7 +53,7 @@ Both endpoints accept the same payload and return the same response format.
 </ParamField>
 
 <ParamField body="proxy" type="object">
-  Optional proxy configuration.
+  Custom proxy configuration. If not provided, an automated BrightData proxy will be used based on the country code.
 
   <Expandable title="Proxy object">
     <ParamField body="protocol" type="string" required>
@@ -93,11 +89,11 @@ Both endpoints accept the same payload and return the same response format.
 ## Response
 
 <ResponseField name="action" type="string">
-  Action performed. Returns `account_connected` when onboarding succeeds.
+  Action performed. Returns `account_connected` when onboarding succeeds, or `checkpoint_required` if verification is needed.
 </ResponseField>
 
 <ResponseField name="data" type="object">
-  Account data returned after successful connection.
+  Account data returned after successful connection. If checkpoint_required, additional fields will be present.
 
   <Expandable title="Data object">
     <ResponseField name="linkedinAccountId" type="string">
@@ -117,11 +113,12 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
   -d '{
     "username": "user@example.com",
     "password": "securepassword123",
-    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "country": "us"
   }'
 ```
 
-## Example Response
+## Example Response (Success)
 
 ```json
 {
@@ -132,10 +129,22 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 }
 ```
 
+## Example Response (Checkpoint Required)
+
+```json
+{
+  "action": "checkpoint_required",
+  "data": {
+    "linkedinAccountId": "clxxx123456",
+    "checkpointType": "SMS"
+  }
+}
+```
+
 ## Authentication Methods
 
 ### 1. Username & Password
-The most straightforward method. Provide your LinkedIn email/phone and password:
+Provide your LinkedIn email/phone and password:
 - **Pros**: Simple and direct
 - **Cons**: Requires storing sensitive credentials
 
@@ -162,11 +171,12 @@ Use proxies to route LinkedIn traffic through specific locations:
 - **HTTP/HTTPS**: Standard web proxies
 - **SOCKS5**: More versatile, supports any protocol
 
-## Retry & Fallback Strategy
+## Handling Checkpoints
 
-- **Credentials expire**: Re-run `POST /accounts/reconnect-linkedin` when LinkedIn prompts for security checks
-- **Proxy failures**: Handle proxy errors by retrying with updated credentials or removing proxy
-- **Parallel attempts**: If multiple reconnection attempts run simultaneously, back off and retry later
+If the response returns `checkpoint_required`, you'll need to:
+1. Note the `linkedinAccountId` and `checkpointType` from the response
+2. Prompt the user for the verification code
+3. Call [Solve Checkpoint](/api-reference/endpoint/post-account-checkpoint) with the code
 
 ## Best Practices
 
@@ -198,20 +208,29 @@ async function connectLinkedInAccount(credentials) {
 
   const response = await axios.post(url, credentials, {
     headers: {
-      'X-API-KEY': "YOUR_API_KEY",
+      'X-API-KEY': process.env.SENDPILOT_API_KEY,
       'Content-Type': 'application/json'
     }
   });
 
-  console.log('Connected account:', response.data.data.linkedinAccountId);
-  return response.data;
+  const { action, data } = response.data;
+  
+  if (action === 'checkpoint_required') {
+    console.log('Checkpoint required:', data.checkpointType);
+    // Handle checkpoint flow
+    return { needsCheckpoint: true, accountId: data.linkedinAccountId, checkpointType: data.checkpointType };
+  }
+
+  console.log('Connected account:', data.linkedinAccountId);
+  return { needsCheckpoint: false, accountId: data.linkedinAccountId };
 }
 
 // Usage
-const account = await connectLinkedInAccount({
+const result = await connectLinkedInAccount({
   username: 'user@example.com',
   password: 'securepassword123',
-  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+  country: 'us'
 });
 ```
 
@@ -229,6 +248,6 @@ Always use HTTPS for API requests. Never log or expose credentials in client-sid
 
 ## See Also
 
-- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) - Reconnect an existing account
+- [Solve Checkpoint](/api-reference/endpoint/post-account-checkpoint) - Solve verification challenges
 - [Get Account Status](/api-reference/endpoint/get-account-status) - Verify account health and quota
 - [Logout Account](/api-reference/endpoint/post-account-logout) - Disconnect an account

@@ -1,10 +1,10 @@
 ---
 title: "Send Message"
 openapi: "POST /messaging/message"
-description: "Send a message to a LinkedIn connection with optional text, attachments, voice, or video"
+description: "Send a message to a LinkedIn connection"
 ---
 
-Send a message through a connected account managed by SendPilot. The endpoint supports plain text, file attachments, voice messages, and video messages.
+Send a message through a connected account managed by SendPilot.
 
 ## Request Body
 
@@ -26,28 +26,6 @@ Send a message through a connected account managed by SendPilot. The endpoint su
   Example: `https://www.linkedin.com/in/john-doe`
 </ParamField>
 
-<ParamField body="attachments" type="array<FileUpload>">
-  File attachments to include with the message.
-  
-  <Expandable title="FileUpload object">
-    <ParamField body="fileId" type="string" required>
-      Unique file identifier.
-    </ParamField>
-    
-    <ParamField body="filename" type="string" required>
-      Original filename.
-    </ParamField>
-  </Expandable>
-</ParamField>
-
-<ParamField body="voiceMessage" type="FileUpload">
-  Voice message attachment. Use `.m4a` format for best compatibility with LinkedIn.
-</ParamField>
-
-<ParamField body="videoMessage" type="FileUpload">
-  Video message attachment for LinkedIn.
-</ParamField>
-
 ## Response
 
 <ResponseField name="action" type="string">
@@ -55,8 +33,6 @@ Send a message through a connected account managed by SendPilot. The endpoint su
 </ResponseField>
 
 ## Example Request
-
-### Text Message
 
 ```bash
 curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
@@ -66,41 +42,6 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
     "linkedinAccountId": "clxxx123456",
     "leadUrl": "https://www.linkedin.com/in/john-doe",
     "text": "Hi John, I wanted to reach out about a great opportunity at our company."
-  }'
-```
-
-### Message with Attachments
-
-```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
-  -H "X-API-KEY: YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "linkedinAccountId": "clxxx123456",
-    "leadUrl": "https://www.linkedin.com/in/john-doe",
-    "text": "Here is more information about the opportunity.",
-    "attachments": [
-      {
-        "fileId": "file_abc123",
-        "filename": "Job_Description.pdf"
-      }
-    ]
-  }'
-```
-
-### Voice Message
-
-```bash
-curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
-  -H "X-API-KEY: YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "linkedinAccountId": "clxxx123456",
-    "leadUrl": "https://www.linkedin.com/in/john-doe",
-    "voiceMessage": {
-      "fileId": "file_voice_123",
-      "filename": "intro_message.m4a"
-    }
   }'
 ```
 
@@ -126,15 +67,12 @@ Use the [Message Received Webhook](/api-reference/endpoint/post-webhooks-message
   **Maintain context**: Always provide `leadUrl` to ensure proper message threading and continuity.
 </Tip>
 
-- Combine `text` and `attachments` to deliver richer outreach while respecting channel limits
-- Prefer `.m4a` files for LinkedIn voice notes to avoid transcoding issues
 - Validate `leadUrl` before submission to prevent malformed request errors
-- Ensure attachments comply with platform size and type restrictions
 - Keep messages personalized and relevant to increase engagement rates
 
 ## Conversation Context
 
-**New conversations**: Provide `text`, rich media, or attachments alongside `leadUrl` to initiate outreach. SendPilot handles thread creation.
+**New conversations**: Provide `text` alongside `leadUrl` to initiate outreach. SendPilot handles thread creation.
 
 **Existing conversations**: Include the `leadUrl` associated with the active conversation to maintain continuity across follow-ups.
 
@@ -145,22 +83,6 @@ Use the [Message Received Webhook](/api-reference/endpoint/post-webhooks-message
 | 201 | Success | Message accepted for processing |
 | 400 | `Invalid request data` | Payload validation failed |
 | 401 | `Invalid or missing API key` | Authentication or session problem preventing delivery |
-
-## Message Types
-
-### Text Messages
-Plain text content sent to a LinkedIn connection. Supports basic formatting.
-
-### File Attachments
-Documents, PDFs, images, and other file types. Each attachment must include:
-- `fileId`: Unique identifier for the file
-- `filename`: Original filename with extension
-
-### Voice Messages
-Audio messages sent as voice notes. LinkedIn works best with `.m4a` format. For other platforms (Instagram, Telegram), use the `attachments` array.
-
-### Video Messages
-Video files delivered as rich media messages on LinkedIn.
 
 ## Workflow Example
 
@@ -176,7 +98,7 @@ async function sendMessage(linkedinAccountId, leadUrl, messageText) {
     text: messageText
   }, {
     headers: {
-      'X-API-KEY': "YOUR_API_KEY",
+      'X-API-KEY': process.env.SENDPILOT_API_KEY,
       'Content-Type': 'application/json'
     }
   });

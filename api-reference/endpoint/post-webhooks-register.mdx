@@ -31,7 +31,6 @@ Register a webhook URL to receive real-time event notifications from SendPilot. 
   - `ACCOUNT_CONNECTED` or `account.connected` - Account connected to SendPilot
   - `ACCOUNT_DISCONNECTED` or `account.disconnected` - Account disconnected
   - `ACCOUNT_DELETED` or `account.deleted` - Account permanently deleted
-  - `PROFILE_VIEWED` or `profile.viewed` - Profile viewed through SendPilot
   - `*` - Subscribe to all events
   
   Example: `["MESSAGE_RECEIVED", "CONNECTION_ACCEPTED", "ACCOUNT_DISCONNECTED"]`
@@ -101,11 +100,6 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 | `ACCOUNT_DISCONNECTED` | Account disconnected | [Account Disconnected](/api-reference/endpoint/post-webhooks-linkedin-account-status) |
 | `ACCOUNT_DELETED` | Account permanently deleted | [Account Deleted](/api-reference/endpoint/post-webhooks-account-deleted) |
 
-### Activity Events
-
-| Event | Description | Documentation |
-|-------|-------------|---------------|
-| `PROFILE_VIEWED` | Profile viewed through SendPilot | [Profile Viewed](/api-reference/endpoint/post-webhooks-profile-viewed) |
 
 ## Webhook Security
 
