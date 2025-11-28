@@ -11,39 +11,6 @@ The SendPilot LinkedIn Integration API enables you to programmatically send Link
 https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin
 ```
 
-## Endpoints
-
-### Messaging
-* **POST /messaging/connection-request**: Send LinkedIn connection requests to target candidates
-* **POST /messaging/message**: Send LinkedIn messages to existing connections
-* **GET /messaging/messages**: Poll for recent LinkedIn messages for reconciliation
-* **GET /messaging/connection-status**: Check connection status with a LinkedIn profile
-
-### Accounts
-* **GET /accounts/status**: Retrieve health status, quotas, and limits for managed accounts
-* **GET /accounts/linkedin**: List all LinkedIn accounts for your project
-* **GET /accounts/linkedin/{id}**: Get details of a specific LinkedIn account
-* **POST /accounts/connect-linkedin**: Connect a LinkedIn account to SendPilot
-* **POST /accounts/connect-linkedin/checkpoint**: Solve LinkedIn checkpoint challenges (CAPTCHA, SMS, etc.)
-* **POST /accounts/connect-linkedin/checkpoint/resend**: Resend checkpoint verification code
-* **POST /accounts/reconnect-linkedin**: Reconnect an existing LinkedIn account
-* **POST /accounts/logout**: Logout and disconnect a LinkedIn account
-* **DELETE /accounts/linkedin/{id}**: Permanently delete a LinkedIn account
-
-### Webhooks Management
-* **POST /webhooks/register**: Register a webhook URL to receive event notifications
-* **DELETE /webhooks/unregister**: Remove a webhook URL from receiving events
-* **GET /webhooks/list**: List all registered webhooks for your account
-
-### Webhook Events
-* **message.received**: Inbound LinkedIn message received
-* **message.sent**: Outbound message successfully delivered
-* **connection.accepted**: Connection request accepted
-* **connection.rejected**: Connection request rejected
-* **account.connected**: Account connected to SendPilot
-* **account.disconnected**: Account disconnected
-* **account.deleted**: Account permanently deleted
-
 ## Authentication
 
 All API requests require authentication using an API key header. Include the following header in every request:
@@ -126,9 +93,6 @@ SendPilot can send real-time notifications to your webhook endpoints for various
 - **Account Connected**: When an account connects to SendPilot
 - **Account Disconnected**: When an account loses connectivity
 - **Account Deleted**: When an account is permanently removed
-
-**Activity Events:**
-- **Profile Viewed**: When a profile is viewed through SendPilot
 
 Register webhooks using the [Webhook Registration endpoint](/api-reference/endpoint/post-webhooks-register).
 
