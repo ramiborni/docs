@@ -1,0 +1,120 @@
+---
+title: "Resend Checkpoint Code"
+openapi: "POST /accounts/connect-linkedin/checkpoint/resend"
+description: "Request to resend the verification code for a LinkedIn checkpoint"
+tags:
+  - accounts
+---
+
+If the user didn't receive the verification code or it expired, use this endpoint to request a new one.
+
+<Warning>
+LinkedIn rate limits code resend requests. Typically, you can only resend a code 2-3 times within a 10-minute window before being temporarily blocked.
+</Warning>
+
+## Request Body
+
+<ParamField body="linkedinAccountId" type="string" required>
+  LinkedIn account ID requesting code resend.
+  
+  Example: `cljk3k2j30001...`
+</ParamField>
+
+## Response
+
+<ResponseField name="action" type="string" required>
+  Action performed.
+  
+  Values:
+  - `checkpoint_resent` - Code was resent successfully
+  - `account_not_found` - Account ID not found
+  - `checkpoint_resend_failed` - Failed to resend checkpoint
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Error message if operation failed.
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/connect-linkedin/checkpoint/resend" \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "linkedinAccountId": "clxxx123456"
+  }'
+```
+
+## Example Response (Success)
+
+```json
+{
+  "action": "checkpoint_resent"
+}
+```
+
+## Example Response (Failed)
+
+```json
+{
+  "action": "checkpoint_resend_failed",
+  "message": "Failed to resend checkpoint"
+}
+```
+
+## Implementation Example
+
+```javascript
+const axios = require('axios');
+
+async function resendCheckpointCode(linkedinAccountId) {
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/connect-linkedin/checkpoint/resend';
+
+  try {
+    const response = await axios.post(url, {
+      linkedinAccountId
+    }, {
+      headers: {
+        'X-API-KEY': process.env.SENDPILOT_API_KEY,
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (response.data.action === 'checkpoint_resent') {
+      console.log('Code resent successfully');
+      return { success: true };
+    } else {
+      console.error('Failed to resend:', response.data.message);
+      return { success: false, error: response.data.message };
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+```
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | `checkpoint_resent` | New verification code sent |
+| 200 | `account_not_found` | Account ID not found |
+| 200 | `checkpoint_resend_failed` | Failed to resend checkpoint |
+| 400 | `Invalid request data` | Missing or malformed parameters |
+| 401 | `Invalid or missing API key` | API authentication failed |
+| 403 | `Forbidden` | User does not have permission to access this account |
+
+## Best Practices
+
+<Tip>
+Add a cooldown timer in your UI after requesting a code resend. This prevents users from hitting rate limits and provides a better experience.
+</Tip>
+
+- Implement a 30-60 second cooldown between resend requests in your UI
+- Handle error responses gracefully with clear user messaging
+
+## See Also
+
+- [Solve Checkpoint](/api-reference/endpoint/post-account-checkpoint) - Submit the verification code
+- [Connect LinkedIn Account](/api-reference/endpoint/post-account-connect-linkedin) - Initial connection attempt

@@ -107,6 +107,43 @@ paths:
           description: Invalid query parameters
         '401':
           description: Invalid or missing API key
+  /messaging/connection-status:
+    get:
+      summary: Get connection status with a LinkedIn profile
+      description: Check the connection status between a LinkedIn account and a lead profile. Returns connected, pending_invitation, or not_connected.
+      operationId: MessagingController_getConnectionStatus
+      tags:
+        - Messaging
+      security:
+        - apiKey: []
+      parameters:
+        - name: linkedinAccountId
+          required: true
+          in: query
+          description: LinkedIn account database ID to check connections from
+          schema:
+            type: string
+            example: clxxx123456
+        - name: linkedinURL
+          required: true
+          in: query
+          description: LinkedIn profile URL of the lead to check connection status for
+          schema:
+            type: string
+            example: https://www.linkedin.com/in/john-doe
+      responses:
+        '200':
+          description: Connection status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConnectionStatusResponseDto'
+        '400':
+          description: Invalid request parameters
+        '401':
+          description: Invalid or missing API key
+        '404':
+          description: LinkedIn account or profile not found
   /accounts/status:
     get:
       summary: Get account status
@@ -165,7 +202,7 @@ paths:
   /accounts/connect-linkedin:
     post:
       summary: Connect LinkedIn account
-      description: Connect a LinkedIn account to SendPilot. You can authenticate using either username/password credentials or LinkedIn access tokens.
+      description: Connect a LinkedIn account to SendPilot using credentials or tokens
       operationId: AccountsController_connectLinkedIn
       tags:
         - Accounts
@@ -189,6 +226,143 @@ paths:
           description: Invalid request data
         '401':
           description: Invalid or missing API key
+  /accounts/connect-linkedin/checkpoint:
+    post:
+      summary: Solve LinkedIn checkpoint
+      description: Solve a LinkedIn checkpoint (CAPTCHA, SMS, OTP, etc.) by providing the verification code
+      operationId: AccountsController_solveCheckpoint
+      tags:
+        - Accounts
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        description: Checkpoint solution details including account ID and verification code
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SolveCheckpointDto'
+      responses:
+        '200':
+          description: Checkpoint solved successfully or another checkpoint required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SolveCheckpointResponseDto'
+        '400':
+          description: Invalid request data or verification code
+        '401':
+          description: Invalid or missing API key
+        '404':
+          description: LinkedIn account not found
+  /accounts/connect-linkedin/checkpoint/resend:
+    post:
+      summary: Resend LinkedIn checkpoint
+      description: Request to resend the verification code for a LinkedIn checkpoint (SMS, Email, etc.)
+      operationId: AccountsController_resendCheckpoint
+      tags:
+        - Accounts
+      security:
+        - apiKey: []
+      requestBody:
+        required: true
+        description: Checkpoint resend details including LinkedIn account ID
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendCheckpointDto'
+      responses:
+        '200':
+          description: Checkpoint resent successfully or error information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResendCheckpointResponseDto'
+        '400':
+          description: Invalid request data
+        '401':
+          description: Invalid or missing API key
+        '403':
+          description: Forbidden - User does not have permission to access this account
+  /accounts/linkedin:
+    get:
+      summary: List all LinkedIn accounts by project id
+      description: Retrieve all LinkedIn accounts for the project (project ID from headers)
+      operationId: AccountsController_listLinkedInAccountsByProjectId
+      tags:
+        - Accounts
+      security:
+        - apiKey: []
+      responses:
+        '200':
+          description: LinkedIn accounts retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListLinkedInAccountsResponseDto'
+        '401':
+          description: Unauthorized - Invalid or missing API key
+        '403':
+          description: Forbidden - User does not have access to this project
+  /accounts/linkedin/{id}:
+    get:
+      summary: Get LinkedIn account by ID
+      description: Retrieve a specific LinkedIn account by ID
+      operationId: AccountsController_getLinkedInAccountById
+      tags:
+        - Accounts
+      security:
+        - apiKey: []
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: LinkedIn account ID to retrieve
+          schema:
+            type: string
+            example: cljk3k2j30001...
+      responses:
+        '200':
+          description: LinkedIn account retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetLinkedInAccountResponseDto'
+        '401':
+          description: Unauthorized - Invalid or missing API key
+        '403':
+          description: Forbidden - User does not have permission to access this account
+        '404':
+          description: Not Found - LinkedIn account not found
+    delete:
+      summary: Remove LinkedIn account
+      description: Permanently delete a LinkedIn account
+      operationId: AccountsController_removeLinkedInAccount
+      tags:
+        - Accounts
+      security:
+        - apiKey: []
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: LinkedIn account ID to remove
+          schema:
+            type: string
+            example: cljk3k2j30001...
+      responses:
+        '200':
+          description: LinkedIn account removed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveLinkedInAccountResponseDto'
+        '401':
+          description: Unauthorized - Invalid or missing API key
+        '403':
+          description: Forbidden - User does not have permission to remove this account
+        '404':
+          description: Not Found - LinkedIn account not found
   /accounts/reconnect-linkedin:
     post:
       summary: Reconnect LinkedIn account
@@ -221,7 +395,7 @@ paths:
   /webhooks/register:
     post:
       summary: Register a webhook URL
-      description: Register a webhook URL to receive event notifications from SendPilot. Requires X-API-KEY authentication.
+      description: Register a webhook URL to receive event notifications from SendPilot. Webhooks are account-based (per user).
       operationId: WebhooksController_registerWebhook
       tags:
         - Webhooks
@@ -244,11 +418,11 @@ paths:
         '400':
           description: Invalid request data
         '401':
-          description: Invalid or missing authentication
+          description: Invalid or missing API key
   /webhooks/unregister:
     delete:
       summary: Unregister a webhook URL
-      description: Remove a webhook URL from receiving event notifications. Requires X-API-KEY authentication.
+      description: Remove a webhook URL from receiving event notifications. Webhooks are account-based (per user).
       operationId: WebhooksController_unregisterWebhook
       tags:
         - Webhooks
@@ -271,11 +445,11 @@ paths:
         '400':
           description: Invalid request data
         '401':
-          description: Invalid or missing authentication
+          description: Invalid or missing API key
   /webhooks/list:
     get:
       summary: List registered webhooks
-      description: Get all registered webhook URLs for your account. Requires X-API-KEY authentication.
+      description: Get all registered webhook URLs for your account filtered by x-project-id, x-user-id, and x-environment headers
       operationId: WebhooksController_listWebhooks
       tags:
         - Webhooks
@@ -288,10 +462,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListWebhooksResponseDto'
-        '400':
-          description: Invalid query parameters
         '401':
-          description: Invalid or missing authentication
+          description: Invalid or missing API key
 components:
   securitySchemes:
     apiKey:
@@ -346,20 +518,19 @@ components:
       type: object
       required:
         - linkedinAccountId
-        - leadUrl
       properties:
         linkedinAccountId:
           type: string
           description: LinkedIn account ID (use the linkedinAccountId returned from the connect LinkedIn endpoint)
           example: clxxx123456
-        leadUrl:
-          type: string
-          description: LinkedIn profile URL of the lead to send message to (required)
-          example: https://www.linkedin.com/in/john-doe
         text:
           type: string
           description: Message text content
           example: Hi! I wanted to reach out about...
+        leadUrl:
+          type: string
+          description: LinkedIn profile URL of the lead to send message to
+          example: https://www.linkedin.com/in/john-doe
         attachments:
           type: array
           description: File attachments to include with the message
@@ -478,6 +649,19 @@ components:
           type: number
           description: Current page number
           example: 0
+    ConnectionStatusResponseDto:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          description: Connection status between the LinkedIn account and the lead
+          enum:
+            - connected
+            - pending_invitation
+            - not_connected
+          example: connected
     AccountStatusDto:
       type: object
       required:
@@ -575,14 +759,15 @@ components:
       type: object
       required:
         - userAgent
+        - country
       properties:
         username:
           type: string
-          description: (Optional) LinkedIn username - should be either an email address or a phone number. Can be used instead of access tokens for authentication.
+          description: LinkedIn username - should be either an email address or a phone number (optional, but if provided, password must also be provided)
           example: user@example.com
         password:
           type: string
-          description: (Optional) LinkedIn account password. Can be used instead of access tokens for authentication.
+          description: LinkedIn account password (required only if username is provided)
           example: securepassword123
         userAgent:
           type: string
@@ -590,22 +775,22 @@ components:
           example: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
         accessToken:
           type: string
-          description: LinkedIn access token for authentication
+          description: LinkedIn access token for authentication (optional, but required if premiumToken is provided)
           example: AQV8...
         premiumToken:
           type: string
-          description: LinkedIn premium token (if applicable)
+          description: LinkedIn premium token (optional, but if provided, accessToken must also be provided)
           example: premium_token_123
         country:
           type: string
-          description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location
-          example: US
+          description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location. Case-insensitive (e.g., "US" or "us" both work).
+          example: us
         ip:
           type: string
           description: IPv4 address to infer proxy location
           example: 192.168.1.1
         proxy:
-          description: Proxy configuration
+          description: Custom proxy configuration. If not provided, an automated BrightData proxy will be used based on the country code.
           allOf:
             - $ref: '#/components/schemas/ProxyDto'
     ConnectLinkedInResponseDto:
@@ -616,20 +801,215 @@ components:
       properties:
         action:
           type: string
-          description: Action performed
+          description: Action performed - can be "account_connected" or "checkpoint_required"
           example: account_connected
         data:
           type: object
-          description: Account data - linkedinAccountId is the LinkedIn account database ID to use for messaging
+          description: Account data - linkedinAccountId is the LinkedIn account database ID to use for messaging. If checkpoint_required, additional fields will be present.
           example:
             linkedinAccountId: clxxx123456
+    SolveCheckpointDto:
+      type: object
+      required:
+        - linkedinAccountId
+        - code
+      properties:
+        linkedinAccountId:
+          type: string
+          description: LinkedIn account database ID (from the connect response)
+          example: clxxx123456
+        code:
+          type: string
+          description: Verification code or token (SMS code, OTP, CAPTCHA token, etc.)
+          example: "123456"
+    SolveCheckpointResponseDto:
+      type: object
+      required:
+        - action
+        - data
+      properties:
+        action:
+          type: string
+          description: Action result - "checkpoint_solved" or "checkpoint_required" if another checkpoint appears
+          example: checkpoint_solved
+        data:
+          type: object
+          description: LinkedIn account ID and checkpoint data (if another checkpoint is required)
+          example:
+            linkedinAccountId: clxxx123456
+    ResendCheckpointDto:
+      type: object
+      required:
+        - linkedinAccountId
+      properties:
+        linkedinAccountId:
+          type: string
+          description: LinkedIn account ID
+          example: cljk3k2j30001...
+    ResendCheckpointResponseDto:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          description: Action performed
+          enum:
+            - checkpoint_resent
+            - account_not_found
+            - checkpoint_resend_failed
+          example: checkpoint_resent
+        message:
+          type: string
+          description: Error message if operation failed
+          example: Failed to resend checkpoint
+    LinkedInAccountDto:
+      type: object
+      required:
+        - id
+        - status
+        - premium
+        - openProfile
+        - isConnected
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: LinkedIn account ID
+          example: cljk3k2j30001...
+        status:
+          type: string
+          description: Account status
+          enum:
+            - PENDING_VERIFICATION
+            - TWO_FA_REQUIRED
+            - OTP_REQUIRED
+            - CAPTCHA_REQUIRED
+            - IN_APP_VALIDATION_REQUIRED
+            - PHONE_REGISTER_REQUIRED
+            - CONNECTED
+            - DISCONNECTED
+            - FAILED
+            - EXPIRED
+          example: CONNECTED
+        firstName:
+          type: string
+          description: First name
+          example: John
+        lastName:
+          type: string
+          description: Last name
+          example: Doe
+        profilePictureUrl:
+          type: string
+          description: Profile picture URL
+          example: https://media.licdn.com/dms/image/...
+        publicProfileUrl:
+          type: string
+          description: Public profile URL
+          example: https://www.linkedin.com/in/johndoe
+        publicIdentifier:
+          type: string
+          description: Public identifier
+          example: johndoe
+        headline:
+          type: string
+          description: Headline
+          example: Software Engineer at Tech Corp
+        location:
+          type: string
+          description: Location
+          example: San Francisco, CA
+        email:
+          type: string
+          description: Email
+          example: john.doe@example.com
+        premium:
+          type: boolean
+          description: Premium account status
+          example: true
+        openProfile:
+          type: boolean
+          description: Open profile status
+          example: false
+        isConnected:
+          type: boolean
+          description: Connection status
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+          description: Created at timestamp
+          example: 2024-01-01T00:00:00.000Z
+        updatedAt:
+          type: string
+          format: date-time
+          description: Updated at timestamp
+          example: 2024-01-01T00:00:00.000Z
+    ListLinkedInAccountsResponseDto:
+      type: object
+      required:
+        - accounts
+        - total
+      properties:
+        accounts:
+          type: array
+          description: Array of LinkedIn accounts
+          items:
+            $ref: '#/components/schemas/LinkedInAccountDto'
+        total:
+          type: number
+          description: Total number of accounts
+          example: 5
+    GetLinkedInAccountResponseDto:
+      type: object
+      required:
+        - account
+      properties:
+        account:
+          type: object
+          description: LinkedIn account details
+          example:
+            id: cljk3k2j30001...
+            providerId: ACoAA...
+            publicIdentifier: john-doe
+            firstName: John
+            lastName: Doe
+            email: john.doe@example.com
+            headline: Software Engineer at Company
+            profilePictureUrl: https://media.licdn.com/...
+            publicProfileUrl: https://www.linkedin.com/in/john-doe
+            location: San Francisco, CA
+            premium: false
+            openProfile: true
+            status: CONNECTED
+            isConnected: true
+            createdAt: 2024-01-01T00:00:00.000Z
+            updatedAt: 2024-01-01T00:00:00.000Z
+            projectId: proj_123456
+    RemoveLinkedInAccountResponseDto:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          description: Action performed
+          enum:
+            - linkedin_account_deleted
+            - linkedin_account_doesn_t_exist
+          example: linkedin_account_deleted
+        linkedinAccountId:
+          type: string
+          description: Removed LinkedIn account ID (only present when account was deleted)
+          example: cljk3k2j30001...
     ReconnectLinkedInDto:
       type: object
       required:
         - linkedinAccountId
-        - username
-        - password
         - userAgent
+        - country
       properties:
         linkedinAccountId:
           type: string
@@ -637,11 +1017,11 @@ components:
           example: clxxx123456
         username:
           type: string
-          description: LinkedIn username - should be either an email address or a phone number
+          description: LinkedIn username - should be either an email address or a phone number (optional, but if provided, password must also be provided)
           example: user@example.com
         password:
           type: string
-          description: LinkedIn account password
+          description: LinkedIn account password (required only if username is provided)
           example: securepassword123
         userAgent:
           type: string
@@ -649,22 +1029,22 @@ components:
           example: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36
         accessToken:
           type: string
-          description: LinkedIn access token for authentication
+          description: LinkedIn access token for authentication (optional, but required if premiumToken is provided)
           example: AQV8...
         premiumToken:
           type: string
-          description: LinkedIn premium token (if applicable)
+          description: LinkedIn premium token (optional, but if provided, accessToken must also be provided)
           example: premium_token_123
         country:
           type: string
-          description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location
-          example: US
+          description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location. Case-insensitive (e.g., "US" or "us" both work).
+          example: us
         ip:
           type: string
           description: IPv4 address to infer proxy location
           example: 192.168.1.1
         proxy:
-          description: Proxy configuration
+          description: Custom proxy configuration. If not provided, an automated BrightData proxy will be used based on the country code.
           allOf:
             - $ref: '#/components/schemas/ProxyDto'
     ReconnectLinkedInResponseDto:
@@ -675,11 +1055,11 @@ components:
       properties:
         action:
           type: string
-          description: Action performed
+          description: Action performed - can be "account_reconnected" or "checkpoint_required"
           example: account_reconnected
         data:
           type: object
-          description: Account data - linkedinAccountId is the LinkedIn account database ID
+          description: Account data - linkedinAccountId is the LinkedIn account database ID. If checkpoint_required, additional fields will be present.
           example:
             linkedinAccountId: clxxx123456
     RegisterWebhookDto:
@@ -694,8 +1074,8 @@ components:
           example: https://your-app.com/webhooks/sendpilot
         secret:
           type: string
-          description: Webhook secret for signature verification
-          example: your_webhook_secret_123
+          description: Webhook secret for signature verification (optional, stored for reference only - Svix generates the actual signing secret)
+          example: my-webhook-identifier
         events:
           type: array
           description: 'List of event types to subscribe to. Accepts both formats: UPPERCASE_UNDERSCORE (MESSAGE_RECEIVED) or lowercase.dot (message.received). Use * for all events.'
@@ -737,6 +1117,37 @@ components:
           type: string
           description: Status of webhook unregistration
           example: unregistered
+    WebhookItemDto:
+      type: object
+      required:
+        - url
+        - events
+        - createdAt
+        - status
+      properties:
+        url:
+          type: string
+          description: Webhook URL
+          example: https://your-app.com/webhooks/sendpilot
+        events:
+          type: array
+          description: List of subscribed event types
+          items:
+            type: string
+          example:
+            - MESSAGE_RECEIVED
+            - CONNECTION_ACCEPTED
+        createdAt:
+          type: string
+          description: When the webhook was created
+          example: 2025-11-01T10:00:00.000Z
+        status:
+          type: string
+          description: Webhook status
+          enum:
+            - active
+            - inactive
+          example: active
     ListWebhooksResponseDto:
       type: object
       required:
@@ -746,4 +1157,4 @@ components:
           type: array
           description: List of registered webhooks
           items:
-            type: object
+            $ref: '#/components/schemas/WebhookItemDto'

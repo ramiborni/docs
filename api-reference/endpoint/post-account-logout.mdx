@@ -58,7 +58,7 @@ Logging out an account will stop all active campaigns using that account. Messag
 When you logout an account:
 1. The active LinkedIn session is invalidated
 2. All scheduled messages and connection requests using this account are paused
-3. The account status changes to "disconnected"
+3. The account status changes to "DISCONNECTED"
 4. You'll receive an `account.disconnected` webhook event
 
 ## Reconnecting After Logout
@@ -86,7 +86,7 @@ async function logoutAccount(linkedinAccountId) {
     linkedinAccountId
   }, {
     headers: {
-      'X-API-KEY': "YOUR_API_KEY",
+      'X-API-KEY': process.env.SENDPILOT_API_KEY,
       'Content-Type': 'application/json'
     }
   });
@@ -119,24 +119,6 @@ Pause all active campaigns before logging out an account to prevent message deli
 - Update your internal tracking immediately after logout
 - Set up webhooks to monitor disconnection events
 - Document logout reasons for future reference
-
-## Account Lifecycle Management
-
-### Planned Logout
-For scheduled maintenance or rotation:
-1. Check account status
-2. Pause active campaigns
-3. Wait for pending operations to complete
-4. Execute logout
-5. Update internal records
-
-### Emergency Logout
-For security incidents:
-1. Execute logout immediately
-2. Audit recent account activity
-3. Update security protocols
-4. Review and rotate credentials
-5. Reconnect with enhanced security
 
 ## See Also
 

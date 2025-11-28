@@ -1,0 +1,165 @@
+---
+title: "Connection Rejected Webhook"
+description: "Webhook payload emitted when a LinkedIn connection request is rejected"
+tags:
+  - webhooks
+  - accounts
+---
+
+Receive notifications when a LinkedIn connection invitation is rejected by the target profile.
+
+## Event Type
+
+`CONNECTION_REJECTED` (or `connection.rejected`)
+
+**Triggered when:** A LinkedIn connection request is declined or withdrawn
+
+## Webhook Event Payload
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for this webhook event. Use for idempotency tracking.
+  
+  Example: `evt_conn_rejected_1699358400000`
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Type of event. Value: `connection.rejected`
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot captured the event.
+  
+  Example: `2025-11-07T10:00:00.000Z`
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Event data containing rejection details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      LinkedIn account ID that sent the original connection request.
+      
+      Example: `clxxx123456`
+    </ParamField>
+    
+    <ParamField body="leadProfileUrl" type="string" required>
+      LinkedIn profile URL of the lead who rejected the connection.
+      
+      Example: `https://www.linkedin.com/in/jane-smith`
+    </ParamField>
+    
+    <ParamField body="originalRequestId" type="string">
+      ID of the original connection request.
+      
+      Example: `req_abc123`
+    </ParamField>
+    
+    <ParamField body="rejectedAt" type="string" required>
+      ISO-8601 timestamp when the connection was rejected.
+      
+      Example: `2025-11-07T10:00:00.000Z`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Webhook Payload
+
+```json
+{
+  "eventId": "evt_conn_rejected_1699358400000",
+  "eventType": "connection.rejected",
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "leadProfileUrl": "https://www.linkedin.com/in/jane-smith",
+    "originalRequestId": "req_abc123",
+    "rejectedAt": "2025-11-07T10:00:00.000Z"
+  }
+}
+```
+
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
+
+## Implementation Example
+
+```javascript
+app.post('/webhooks/connection-rejected', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ received: true });
+  }
+  
+  try {
+    // Update lead status
+    await updateLeadStatus(event.data.leadProfileUrl, 'connection_rejected');
+    
+    // Remove from active campaigns
+    await removeLeadFromCampaigns(event.data.leadProfileUrl, event.data.accountId);
+    
+    // Update analytics
+    await incrementRejectionCount(event.data.accountId);
+    
+    // Check if rejection rate is too high
+    const rejectionRate = await getAccountRejectionRate(event.data.accountId);
+    if (rejectionRate > 0.3) { // 30% rejection rate
+      await alertHighRejectionRate(event.data.accountId, rejectionRate);
+    }
+    
+    await markEventProcessed(event.eventId);
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+## Handling High Rejection Rates
+
+A high rejection rate may indicate:
+
+| Issue | Recommended Action |
+|-------|-------------------|
+| Poor targeting | Review lead selection criteria |
+| Generic connection notes | Personalize your outreach |
+| Too many requests | Reduce connection request volume |
+| Account reputation | Review account activity patterns |
+
+<Warning>
+LinkedIn monitors rejection rates. Consistently high rejection rates may trigger account restrictions.
+</Warning>
+
+## Best Practices
+
+<Tip>
+Track rejection rates per campaign to identify which outreach strategies are most effective.
+</Tip>
+
+- Monitor rejection rates across accounts and campaigns
+- Don't retry connection requests to leads who rejected
+- Use rejection data to improve targeting and messaging
+- Consider A/B testing different connection note templates
+
+## See Also
+
+- [Connection Accepted Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-accepted) - Handle accepted connections
+- [Send Connection Request](/api-reference/endpoint/post-connection-request) - Send connection requests
+

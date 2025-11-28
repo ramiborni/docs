@@ -1,0 +1,164 @@
+---
+title: "List LinkedIn Accounts"
+openapi: "GET /accounts/linkedin"
+description: "Get all LinkedIn accounts connected to your project"
+tags:
+  - accounts
+---
+
+Retrieve a list of all LinkedIn accounts that have been connected to your SendPilot project.
+
+## Response
+
+<ResponseField name="accounts" type="array" required>
+  Array of connected LinkedIn accounts.
+</ResponseField>
+
+<ResponseField name="total" type="number" required>
+  Total number of accounts.
+</ResponseField>
+
+### Account Object Fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | ✅ | LinkedIn account ID |
+| `status` | string | ✅ | Account status (see status values below) |
+| `firstName` | string | | First name |
+| `lastName` | string | | Last name |
+| `email` | string | | Email address |
+| `headline` | string | | Professional headline |
+| `location` | string | | Location |
+| `profilePictureUrl` | string | | Profile picture URL |
+| `publicProfileUrl` | string | | Public LinkedIn profile URL |
+| `publicIdentifier` | string | | Public identifier (username) |
+| `premium` | boolean | ✅ | Whether account has LinkedIn Premium |
+| `openProfile` | boolean | ✅ | Whether profile is open |
+| `isConnected` | boolean | ✅ | Connection status |
+| `createdAt` | string | ✅ | When account was connected |
+| `updatedAt` | string | ✅ | Last update timestamp |
+
+## Account Status Values
+
+| Status | Description | Can Send Messages |
+|--------|-------------|-------------------|
+| `CONNECTED` | Account is connected and operational | ✅ Yes |
+| `DISCONNECTED` | Account session has expired or been invalidated | ❌ No |
+| `PENDING_VERIFICATION` | Awaiting verification | ❌ No |
+| `TWO_FA_REQUIRED` | Two-factor authentication required | ❌ No |
+| `OTP_REQUIRED` | One-time password required | ❌ No |
+| `CAPTCHA_REQUIRED` | CAPTCHA challenge required | ❌ No |
+| `IN_APP_VALIDATION_REQUIRED` | In-app validation required | ❌ No |
+| `PHONE_REGISTER_REQUIRED` | Phone registration required | ❌ No |
+| `FAILED` | Connection failed | ❌ No |
+| `EXPIRED` | Session expired | ❌ No |
+
+## Example Request
+
+```bash
+curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin" \
+  -H "X-API-KEY: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "accounts": [
+    {
+      "id": "clxxx123456",
+      "status": "CONNECTED",
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john@example.com",
+      "headline": "Software Engineer at TechCorp",
+      "location": "San Francisco, CA",
+      "profilePictureUrl": "https://media.licdn.com/dms/image/...",
+      "publicProfileUrl": "https://www.linkedin.com/in/johndoe",
+      "publicIdentifier": "johndoe",
+      "premium": true,
+      "openProfile": false,
+      "isConnected": true,
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "updatedAt": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "clxxx789012",
+      "status": "DISCONNECTED",
+      "firstName": "Jane",
+      "lastName": "Smith",
+      "email": "jane@example.com",
+      "headline": "Product Manager",
+      "premium": false,
+      "openProfile": true,
+      "isConnected": false,
+      "createdAt": "2024-01-15T00:00:00.000Z",
+      "updatedAt": "2024-02-01T00:00:00.000Z"
+    }
+  ],
+  "total": 2
+}
+```
+
+## Implementation Example
+
+```javascript
+const axios = require('axios');
+
+async function listLinkedInAccounts() {
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin';
+
+  const response = await axios.get(url, {
+    headers: {
+      'X-API-KEY': process.env.SENDPILOT_API_KEY
+    }
+  });
+
+  return response.data;
+}
+
+// Get only connected accounts
+async function getConnectedAccounts() {
+  const { accounts } = await listLinkedInAccounts();
+  return accounts.filter(account => account.status === 'CONNECTED');
+}
+
+// Check account health
+async function checkAccountHealth() {
+  const { accounts, total } = await listLinkedInAccounts();
+  
+  const connectedCount = accounts.filter(a => a.status === 'CONNECTED').length;
+  const disconnectedCount = accounts.filter(a => a.status === 'DISCONNECTED').length;
+  
+  console.log(`Total accounts: ${total}`);
+  console.log(`Connected: ${connectedCount}`);
+  console.log(`Disconnected: ${disconnectedCount}`);
+  
+  return { connectedCount, disconnectedCount, total };
+}
+```
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | Success | Accounts retrieved successfully |
+| 401 | `Unauthorized` | Invalid or missing API key |
+| 403 | `Forbidden` | User does not have access to this project |
+
+## Best Practices
+
+<Tip>
+Regularly poll this endpoint to monitor account health and proactively reconnect disconnected accounts.
+</Tip>
+
+- Cache the account list and refresh periodically (every 5-10 minutes)
+- Set up alerts for accounts that become disconnected
+- Use this endpoint to populate account selectors in your UI
+- Cross-reference with [Get Account Status](/api-reference/endpoint/get-account-status) for quota information
+
+## See Also
+
+- [Get LinkedIn Account](/api-reference/endpoint/get-accounts-linkedin-id) - Get details of a specific account
+- [Remove LinkedIn Account](/api-reference/endpoint/delete-accounts-linkedin-id) - Remove an account
+- [Get Account Status](/api-reference/endpoint/get-account-status) - Check quotas and limits

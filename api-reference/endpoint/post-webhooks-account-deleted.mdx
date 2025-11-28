@@ -1,0 +1,163 @@
+---
+title: "Account Deleted Webhook"
+description: "Webhook payload emitted when a LinkedIn account is permanently deleted from SendPilot"
+tags:
+  - webhooks
+  - accounts
+---
+
+Receive notifications when a LinkedIn account is permanently deleted from SendPilot.
+
+## Event Type
+
+`ACCOUNT_DELETED` (or `account.deleted`)
+
+**Triggered when:** A LinkedIn account is permanently removed from SendPilot via API or dashboard
+
+## Webhook Event Payload
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for this webhook event. Use for idempotency tracking.
+  
+  Example: `evt_acc_deleted_1699358400000`
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Type of event. Value: `account.deleted`
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot captured the event.
+  
+  Example: `2025-11-07T10:00:00.000Z`
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Event data containing deletion details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      LinkedIn account ID that was deleted.
+      
+      Example: `clxxx123456`
+    </ParamField>
+    
+    <ParamField body="deletedBy" type="string" required>
+      Who initiated the deletion.
+      
+      Values: `user`, `api`, `system`
+    </ParamField>
+    
+    <ParamField body="deletedAt" type="string" required>
+      ISO-8601 timestamp when the account was deleted.
+      
+      Example: `2025-11-07T10:00:00.000Z`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Webhook Payload
+
+```json
+{
+  "eventId": "evt_acc_deleted_1699358400000",
+  "eventType": "account.deleted",
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "deletedBy": "api",
+    "deletedAt": "2025-11-07T10:00:00.000Z"
+  }
+}
+```
+
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
+
+## Deleted By Values
+
+| Value | Description |
+|-------|-------------|
+| `user` | User deleted via SendPilot dashboard |
+| `api` | Deleted via API call |
+| `system` | System-initiated deletion (e.g., account cleanup) |
+
+## Implementation Example
+
+```javascript
+app.post('/webhooks/account-deleted', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ received: true });
+  }
+  
+  try {
+    // Remove account from your system
+    await db.accounts.delete({
+      accountId: event.data.accountId
+    });
+    
+    // Cancel all associated campaigns
+    await cancelCampaignsForAccount(event.data.accountId);
+    
+    // Log for audit
+    await auditLog.create({
+      action: 'account_deleted',
+      accountId: event.data.accountId,
+      deletedBy: event.data.deletedBy,
+      timestamp: event.data.deletedAt
+    });
+    
+    // Notify team if unexpected deletion
+    if (event.data.deletedBy === 'system') {
+      await alertTeam({
+        type: 'unexpected_account_deletion',
+        accountId: event.data.accountId
+      });
+    }
+    
+    await markEventProcessed(event.eventId);
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+## Important Notes
+
+<Warning>
+Account deletion is permanent. All associated data is removed and cannot be recovered. This webhook is your last chance to capture account information.
+</Warning>
+
+## Use Cases
+
+- Sync account removal with your CRM
+- Cancel active campaigns using the deleted account
+- Maintain audit trails for compliance
+- Alert team of unexpected deletions
+
+## See Also
+
+- [Delete LinkedIn Account](/api-reference/endpoint/delete-accounts-linkedin-id) - Delete accounts via API
+- [Account Disconnected Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-status) - Handle temporary disconnections
+- [Logout Account](/api-reference/endpoint/post-account-logout) - Temporary disconnection alternative
+

@@ -1,0 +1,149 @@
+---
+title: "Solve Checkpoint"
+openapi: "POST /accounts/connect-linkedin/checkpoint"
+description: "Solve a LinkedIn checkpoint challenge during account connection"
+tags:
+  - accounts
+---
+
+When connecting a LinkedIn account, you may encounter checkpoint challenges such as SMS verification, in-app notifications, CAPTCHA, or OTP. Use this endpoint to submit the verification code and complete the connection process.
+
+## Checkpoint Types
+
+LinkedIn may require different types of verification during account connection:
+
+| Status | Description |
+|--------|-------------|
+| `TWO_FA_REQUIRED` | Two-factor authentication required |
+| `OTP_REQUIRED` | One-time password required |
+| `CAPTCHA_REQUIRED` | CAPTCHA challenge required |
+| `IN_APP_VALIDATION_REQUIRED` | Approve notification in LinkedIn mobile app |
+| `PHONE_REGISTER_REQUIRED` | Phone registration required |
+
+## Request Body
+
+<ParamField body="linkedinAccountId" type="string" required>
+  LinkedIn account database ID (from the connect response).
+  
+  Example: `clxxx123456`
+</ParamField>
+
+<ParamField body="code" type="string" required>
+  Verification code or token (SMS code, OTP, CAPTCHA token, etc.)
+  
+  Example: `123456`
+</ParamField>
+
+## Response
+
+<ResponseField name="action" type="string" required>
+  Action result - `checkpoint_solved` or `checkpoint_required` if another checkpoint appears.
+</ResponseField>
+
+<ResponseField name="data" type="object" required>
+  LinkedIn account ID and checkpoint data (if another checkpoint is required).
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X POST "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/connect-linkedin/checkpoint" \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "linkedinAccountId": "clxxx123456",
+    "code": "123456"
+  }'
+```
+
+## Example Response (Success)
+
+```json
+{
+  "action": "checkpoint_solved",
+  "data": {
+    "linkedinAccountId": "clxxx123456"
+  }
+}
+```
+
+## Example Response (Another Checkpoint Required)
+
+```json
+{
+  "action": "checkpoint_required",
+  "data": {
+    "linkedinAccountId": "clxxx123456",
+    "checkpointType": "IN_APP_VALIDATION_REQUIRED"
+  }
+}
+```
+
+## Checkpoint Flow
+
+The typical checkpoint flow when connecting a LinkedIn account:
+
+1. Call [Connect LinkedIn Account](/api-reference/endpoint/post-account-connect-linkedin)
+2. If response includes `checkpoint_required`, note the checkpoint type in data
+3. User enters the verification code (received via SMS, email, etc.) or approves in-app
+4. Call this endpoint with the code
+5. If successful, account is connected
+6. If another checkpoint is required, repeat steps 3-5
+
+## Implementation Example
+
+```javascript
+const axios = require('axios');
+
+async function solveCheckpoint(linkedinAccountId, code) {
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/connect-linkedin/checkpoint';
+
+  const response = await axios.post(url, {
+    linkedinAccountId,
+    code
+  }, {
+    headers: {
+      'X-API-KEY': process.env.SENDPILOT_API_KEY,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  const { action, data } = response.data;
+
+  if (action === 'checkpoint_solved') {
+    console.log('Account connected successfully:', data.linkedinAccountId);
+    return { success: true, accountId: data.linkedinAccountId };
+  } else if (action === 'checkpoint_required') {
+    console.log('Another checkpoint required:', data.checkpointType);
+    return { success: false, nextCheckpoint: data.checkpointType };
+  }
+}
+```
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | `checkpoint_solved` | Checkpoint solved successfully |
+| 200 | `checkpoint_required` | Another checkpoint is needed |
+| 400 | `Invalid request data or verification code` | Invalid code or malformed request |
+| 401 | `Invalid or missing API key` | API authentication failed |
+| 404 | `LinkedIn account not found` | Account ID doesn't exist |
+
+## Best Practices
+
+<Tip>
+Implement retry logic with exponential backoff for failed checkpoint attempts. LinkedIn may temporarily lock accounts after too many failed attempts.
+</Tip>
+
+- Store the `linkedinAccountId` from the initial connect response to use in checkpoint calls
+- Provide clear UI feedback to users during the checkpoint process
+- For SMS/OTP checkpoints, implement timeout handling (codes typically valid for 10 minutes)
+- For `IN_APP_VALIDATION_REQUIRED`, prompt users to check their LinkedIn mobile app
+- Handle multiple checkpoint types sequentially if required
+
+## See Also
+
+- [Connect LinkedIn Account](/api-reference/endpoint/post-account-connect-linkedin) - Initial connection attempt
+- [Resend Checkpoint Code](/api-reference/endpoint/post-account-checkpoint-resend) - Request a new verification code
+- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) - Reconnect an existing account

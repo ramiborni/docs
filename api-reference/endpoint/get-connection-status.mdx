@@ -1,0 +1,161 @@
+---
+title: "Get Connection Status"
+openapi: "GET /messaging/connection-status"
+description: "Check the connection status between a LinkedIn account and a target profile"
+tags:
+  - messaging
+---
+
+Check whether a LinkedIn account is connected to a specific profile. This is useful for determining whether to send a connection request or a direct message.
+
+## Query Parameters
+
+<ParamField query="linkedinAccountId" type="string" required>
+  LinkedIn account database ID to check connections from.
+  
+  Example: `clxxx123456`
+</ParamField>
+
+<ParamField query="linkedinURL" type="string" required>
+  LinkedIn profile URL of the lead to check connection status for.
+  
+  Example: `https://www.linkedin.com/in/john-doe`
+</ParamField>
+
+## Response
+
+<ResponseField name="status" type="string" required>
+  Connection status with the target profile.
+  
+  Values:
+  - `connected` - Already connected, can send direct messages
+  - `pending_invitation` - Connection request sent, waiting for acceptance
+  - `not_connected` - No connection, need to send a connection request first
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/connection-status?linkedinAccountId=clxxx123456&linkedinURL=https%3A%2F%2Fwww.linkedin.com%2Fin%2Fjohn-doe" \
+  -H "X-API-KEY: YOUR_API_KEY"
+```
+
+## Example Response (Connected)
+
+```json
+{
+  "status": "connected"
+}
+```
+
+## Example Response (Pending)
+
+```json
+{
+  "status": "pending_invitation"
+}
+```
+
+## Example Response (Not Connected)
+
+```json
+{
+  "status": "not_connected"
+}
+```
+
+## Connection Status Decision Flow
+
+```
+┌─────────────────────┐
+│ Check Connection    │
+│ Status              │
+└─────────┬───────────┘
+          │
+          ▼
+    ┌─────────────┐
+    │   Status?   │
+    └──────┬──────┘
+           │
+    ┌──────┼──────┐
+    │      │      │
+    ▼      ▼      ▼
+connected  pending  not_connected
+    │      │      │
+    ▼      ▼      ▼
+  Send   Wait/   Send
+  Message Follow Connection
+         up     Request
+```
+
+## Implementation Example
+
+```javascript
+const axios = require('axios');
+
+async function getConnectionStatus(linkedinAccountId, linkedinURL) {
+  const url = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/connection-status';
+
+  const response = await axios.get(url, {
+    params: { linkedinAccountId, linkedinURL },
+    headers: {
+      'X-API-KEY': process.env.SENDPILOT_API_KEY
+    }
+  });
+
+  return response.data;
+}
+
+// Smart outreach based on connection status
+async function smartOutreach(linkedinAccountId, leadUrl, message, connectionNote) {
+  const { status } = await getConnectionStatus(linkedinAccountId, leadUrl);
+
+  switch (status) {
+    case 'connected':
+      // Send direct message
+      return await sendMessage(linkedinAccountId, leadUrl, message);
+
+    case 'pending_invitation':
+      // Already sent invitation, wait for acceptance
+      console.log('Invitation already pending');
+      return { action: 'waiting_for_acceptance' };
+
+    case 'not_connected':
+      // Send connection request
+      return await sendConnectionRequest(linkedinAccountId, leadUrl, connectionNote);
+
+    default:
+      throw new Error(`Unknown status: ${status}`);
+  }
+}
+```
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | Success | Connection status retrieved |
+| 400 | `Invalid request parameters` | Missing or invalid parameters |
+| 401 | `Invalid or missing API key` | API authentication failed |
+| 404 | `LinkedIn account or profile not found` | Account or profile doesn't exist |
+
+## Best Practices
+
+<Tip>
+Cache connection status results for a few minutes to reduce API calls when processing the same leads repeatedly.
+</Tip>
+
+- Check connection status before deciding whether to send a message or connection request
+- Use this endpoint to build outreach workflows that adapt to the relationship state
+- For bulk operations, batch your status checks and cache results
+- Monitor pending invitations - if too many are pending, it may indicate low acceptance rates
+
+## Rate Limiting
+
+This endpoint counts toward your daily profile lookup limit (100/day per account). Use caching to minimize repeated lookups for the same leads.
+
+## See Also
+
+- [Send Connection Request](/api-reference/endpoint/post-connection-request) - Send a connection request
+- [Send Message](/api-reference/endpoint/post-message) - Send a message to a connection
+- [Get Account Status](/api-reference/endpoint/get-account-status) - Check remaining quotas

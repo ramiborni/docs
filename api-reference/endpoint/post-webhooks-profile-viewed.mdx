@@ -1,0 +1,135 @@
+---
+title: "Profile Viewed Webhook"
+description: "Webhook payload emitted when a LinkedIn profile is viewed through SendPilot"
+tags:
+  - webhooks
+  - accounts
+---
+
+Receive notifications when a LinkedIn profile is viewed through SendPilot, such as during profile retrieval operations.
+
+## Event Type
+
+`PROFILE_VIEWED` (or `profile.viewed`)
+
+**Triggered when:** A LinkedIn profile is viewed or retrieved through SendPilot
+
+## Webhook Event Payload
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for this webhook event. Use for idempotency tracking.
+  
+  Example: `evt_profile_viewed_1699358400000`
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Type of event. Value: `profile.viewed`
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot captured the event.
+  
+  Example: `2025-11-07T10:00:00.000Z`
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Event data containing profile view details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      LinkedIn account ID that viewed the profile.
+      
+      Example: `clxxx123456`
+    </ParamField>
+    
+    <ParamField body="viewedProfileUrl" type="string" required>
+      LinkedIn profile URL that was viewed.
+      
+      Example: `https://www.linkedin.com/in/jane-smith`
+    </ParamField>
+    
+    <ParamField body="viewedAt" type="string" required>
+      ISO-8601 timestamp when the profile was viewed.
+      
+      Example: `2025-11-07T10:00:00.000Z`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Webhook Payload
+
+```json
+{
+  "eventId": "evt_profile_viewed_1699358400000",
+  "eventType": "profile.viewed",
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "viewedProfileUrl": "https://www.linkedin.com/in/jane-smith",
+    "viewedAt": "2025-11-07T10:00:00.000Z"
+  }
+}
+```
+
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
+
+## Implementation Example
+
+```javascript
+app.post('/webhooks/profile-viewed', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ received: true });
+  }
+  
+  try {
+    // Log profile view
+    await db.profileViews.create({
+      eventId: event.eventId,
+      accountId: event.data.accountId,
+      viewedProfileUrl: event.data.viewedProfileUrl,
+      viewedAt: new Date(event.data.viewedAt)
+    });
+    
+    // Update quota tracking
+    await incrementProfileViewCount(event.data.accountId);
+    
+    await markEventProcessed(event.eventId);
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+## Use Cases
+
+- Track profile view activity for compliance
+- Monitor quota usage for profile lookups
+- Build activity timelines for leads
+- Audit trail for account actions
+
+## See Also
+
+- [Get Account Status](/api-reference/endpoint/get-account-status) - Check remaining profile view quota
+- [Rate Limits](/docs/operations/rate-limits) - Profile view daily limits
+

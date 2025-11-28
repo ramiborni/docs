@@ -1,0 +1,174 @@
+---
+title: "Account Connected Webhook"
+description: "Webhook payload emitted when a LinkedIn account is successfully connected to SendPilot"
+tags:
+  - webhooks
+  - accounts
+---
+
+Receive notifications when a LinkedIn account is successfully connected or reconnected to SendPilot.
+
+## Event Type
+
+`ACCOUNT_CONNECTED` (or `account.connected`)
+
+**Triggered when:** A LinkedIn account successfully connects or reconnects to SendPilot
+
+## Webhook Event Payload
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for this webhook event. Use for idempotency tracking.
+  
+  Example: `evt_acc_connected_1699358400000`
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Type of event. Value: `account.connected`
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot captured the event.
+  
+  Example: `2025-11-07T10:00:00.000Z`
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Event data containing connection details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      LinkedIn account ID that was connected.
+      
+      Example: `clxxx123456`
+    </ParamField>
+    
+    <ParamField body="profileUrl" type="string" required>
+      LinkedIn profile URL of the connected account.
+      
+      Example: `https://www.linkedin.com/in/john-doe`
+    </ParamField>
+    
+    <ParamField body="name" type="string" required>
+      Full name on the LinkedIn profile.
+      
+      Example: `John Doe`
+    </ParamField>
+    
+    <ParamField body="connectionType" type="string" required>
+      Type of connection event.
+      
+      Values: `new`, `reconnect`
+    </ParamField>
+    
+    <ParamField body="connectedAt" type="string" required>
+      ISO-8601 timestamp when the account was connected.
+      
+      Example: `2025-11-07T10:00:00.000Z`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Webhook Payload
+
+```json
+{
+  "eventId": "evt_acc_connected_1699358400000",
+  "eventType": "account.connected",
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "profileUrl": "https://www.linkedin.com/in/john-doe",
+    "name": "John Doe",
+    "connectionType": "new",
+    "connectedAt": "2025-11-07T10:00:00.000Z"
+  }
+}
+```
+
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
+
+## Connection Types
+
+| Type | Description |
+|------|-------------|
+| `new` | First time connecting this account |
+| `reconnect` | Reconnecting a previously connected account |
+
+## Implementation Example
+
+```javascript
+app.post('/webhooks/account-connected', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ received: true });
+  }
+  
+  try {
+    if (event.data.connectionType === 'new') {
+      // New account - create record
+      await db.accounts.create({
+        accountId: event.data.accountId,
+        profileUrl: event.data.profileUrl,
+        name: event.data.name,
+        status: 'active',
+        connectedAt: new Date(event.data.connectedAt)
+      });
+      
+      // Send welcome notification
+      await notifyTeam({
+        type: 'new_account_connected',
+        accountName: event.data.name,
+        accountId: event.data.accountId
+      });
+    } else {
+      // Reconnection - update existing record
+      await db.accounts.update({
+        accountId: event.data.accountId,
+        status: 'active',
+        reconnectedAt: new Date(event.data.connectedAt)
+      });
+      
+      // Resume paused campaigns
+      await resumePausedCampaigns(event.data.accountId);
+    }
+    
+    await markEventProcessed(event.eventId);
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+## Use Cases
+
+- Automatically resume campaigns when accounts reconnect
+- Track account onboarding progress
+- Sync account details with your CRM
+- Notify team members of new connections
+
+## See Also
+
+- [Account Disconnected Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-status) - Handle disconnections
+- [Connect LinkedIn Account](/api-reference/endpoint/post-account-connect-linkedin) - Connect accounts via API
+- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) - Reconnect accounts
+

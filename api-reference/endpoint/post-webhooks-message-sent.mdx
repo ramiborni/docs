@@ -1,0 +1,161 @@
+---
+title: "Message Sent Webhook"
+description: "Webhook payload emitted when a LinkedIn message is successfully sent"
+tags:
+  - webhooks
+  - messaging
+---
+
+Receive real-time notifications when messages sent through SendPilot are successfully delivered to LinkedIn.
+
+## Event Type
+
+`MESSAGE_SENT` (or `message.sent`)
+
+**Triggered when:** A LinkedIn message sent via SendPilot API is successfully delivered
+
+## Webhook Event Payload
+
+<ParamField body="eventId" type="string" required>
+  Unique identifier for this webhook event. Use for idempotency tracking.
+  
+  Example: `evt_msg_sent_1699358400000`
+</ParamField>
+
+<ParamField body="eventType" type="string" required>
+  Type of message event. Value: `message.sent`
+</ParamField>
+
+<ParamField body="timestamp" type="string" required>
+  ISO-8601 timestamp when SendPilot captured the event.
+  
+  Example: `2025-11-07T10:00:00.000Z`
+</ParamField>
+
+<ParamField body="data" type="object" required>
+  Event data containing message details.
+  
+  <Expandable title="Data object">
+    <ParamField body="accountId" type="string" required>
+      LinkedIn account ID that sent the message.
+      
+      Example: `clxxx123456`
+    </ParamField>
+    
+    <ParamField body="conversationId" type="string" required>
+      Unique conversation thread identifier.
+      
+      Example: `conv_abc123def456`
+    </ParamField>
+    
+    <ParamField body="messageId" type="string" required>
+      Unique message identifier for the sent message.
+      
+      Example: `msg_sent_1699358400000`
+    </ParamField>
+    
+    <ParamField body="recipientProfileUrl" type="string" required>
+      LinkedIn profile URL of the recipient.
+      
+      Example: `https://www.linkedin.com/in/john-doe`
+    </ParamField>
+    
+    <ParamField body="textContent" type="string">
+      Message text content that was sent.
+      
+      Example: `Hi John, thanks for connecting!`
+    </ParamField>
+    
+    <ParamField body="direction" type="string" required>
+      Message direction. Value: `OUTBOUND`
+    </ParamField>
+    
+    <ParamField body="sentAt" type="string" required>
+      ISO-8601 timestamp when the message was sent.
+      
+      Example: `2025-11-07T10:00:00.000Z`
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## Example Webhook Payload
+
+```json
+{
+  "eventId": "evt_msg_sent_1699358400000",
+  "eventType": "message.sent",
+  "timestamp": "2025-11-07T10:00:00.000Z",
+  "data": {
+    "accountId": "clxxx123456",
+    "conversationId": "conv_abc123def456",
+    "messageId": "msg_sent_1699358400000",
+    "recipientProfileUrl": "https://www.linkedin.com/in/john-doe",
+    "textContent": "Hi John, thanks for connecting!",
+    "direction": "OUTBOUND",
+    "sentAt": "2025-11-07T10:00:00.000Z"
+  }
+}
+```
+
+## Expected Response
+
+Your webhook endpoint should respond with:
+
+```json
+{
+  "received": true
+}
+```
+
+**HTTP Status:** `200 OK`
+
+## Implementation Example
+
+```javascript
+app.post('/webhooks/message-sent', async (req, res) => {
+  const signature = req.headers['x-sendpilot-signature'];
+  
+  if (!verifyWebhookSignature(req.body, signature, WEBHOOK_SECRET)) {
+    return res.status(401).json({ error: 'Invalid signature' });
+  }
+  
+  const event = req.body;
+  
+  // Check for duplicate events
+  const isDuplicate = await checkEventProcessed(event.eventId);
+  if (isDuplicate) {
+    return res.status(200).json({ received: true });
+  }
+  
+  // Process the sent message confirmation
+  try {
+    await db.messages.update({
+      messageId: event.data.messageId,
+      status: 'delivered',
+      sentAt: new Date(event.data.sentAt)
+    });
+    
+    // Update campaign metrics
+    await incrementCampaignMessageCount(event.data.accountId);
+    
+    await markEventProcessed(event.eventId);
+    res.status(200).json({ received: true });
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ error: 'Processing failed' });
+  }
+});
+```
+
+## Use Cases
+
+- Track message delivery status
+- Update campaign analytics
+- Confirm outbound messages in your CRM
+- Trigger follow-up workflows after message delivery
+
+## See Also
+
+- [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) - Handle inbound messages
+- [Send Message](/api-reference/endpoint/post-message) - Send messages via API
+

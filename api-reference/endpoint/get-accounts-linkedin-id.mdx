@@ -1,0 +1,125 @@
+---
+title: "Get LinkedIn Account"
+openapi: "GET /accounts/linkedin/{id}"
+description: "Get details of a specific LinkedIn account by ID"
+tags:
+  - accounts
+---
+
+Retrieve detailed information about a specific LinkedIn account connected to your SendPilot project.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  LinkedIn account ID to retrieve.
+  
+  Example: `cljk3k2j30001...`
+</ParamField>
+
+## Response
+
+<ResponseField name="account" type="object" required>
+  LinkedIn account details.
+</ResponseField>
+
+### Account Object Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | string | LinkedIn account ID |
+| `providerId` | string | Provider account ID |
+| `publicIdentifier` | string | Public identifier (username) |
+| `firstName` | string | First name |
+| `lastName` | string | Last name |
+| `email` | string | Email address |
+| `headline` | string | Professional headline |
+| `profilePictureUrl` | string | Profile picture URL |
+| `publicProfileUrl` | string | Public LinkedIn profile URL |
+| `location` | string | Location |
+| `premium` | boolean | Whether account has LinkedIn Premium |
+| `openProfile` | boolean | Whether profile is open |
+| `status` | string | Account status |
+| `isConnected` | boolean | Connection status |
+| `createdAt` | string | When account was connected |
+| `updatedAt` | string | Last update timestamp |
+| `projectId` | string | Project ID |
+
+## Example Request
+
+```bash
+curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/clxxx123456" \
+  -H "X-API-KEY: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "account": {
+    "id": "cljk3k2j30001...",
+    "providerId": "ACoAA...",
+    "publicIdentifier": "john-doe",
+    "firstName": "John",
+    "lastName": "Doe",
+    "email": "john.doe@example.com",
+    "headline": "Software Engineer at Company",
+    "profilePictureUrl": "https://media.licdn.com/...",
+    "publicProfileUrl": "https://www.linkedin.com/in/john-doe",
+    "location": "San Francisco, CA",
+    "premium": false,
+    "openProfile": true,
+    "status": "CONNECTED",
+    "isConnected": true,
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "projectId": "proj_123456"
+  }
+}
+```
+
+## Implementation Example
+
+```javascript
+const axios = require('axios');
+
+async function getLinkedInAccount(id) {
+  const url = `https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/${id}`;
+
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'X-API-KEY': process.env.SENDPILOT_API_KEY
+      }
+    });
+
+    return response.data.account;
+  } catch (error) {
+    if (error.response?.status === 404) {
+      console.error('Account not found');
+      return null;
+    }
+    throw error;
+  }
+}
+
+// Check if account is usable
+async function isAccountReady(id) {
+  const account = await getLinkedInAccount(id);
+  return account && account.status === 'CONNECTED' && account.isConnected;
+}
+```
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | Success | Account retrieved successfully |
+| 401 | `Unauthorized` | Invalid or missing API key |
+| 403 | `Forbidden` | User does not have permission to access this account |
+| 404 | `Not Found` | LinkedIn account not found |
+
+## See Also
+
+- [List LinkedIn Accounts](/api-reference/endpoint/get-accounts-linkedin) - Get all accounts
+- [Remove LinkedIn Account](/api-reference/endpoint/delete-accounts-linkedin-id) - Remove an account
+- [Get Account Status](/api-reference/endpoint/get-account-status) - Check quotas and limits

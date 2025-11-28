@@ -1,0 +1,145 @@
+---
+title: "Remove LinkedIn Account"
+openapi: "DELETE /accounts/linkedin/{id}"
+description: "Permanently remove a LinkedIn account from SendPilot"
+tags:
+  - accounts
+---
+
+Permanently delete a LinkedIn account from your SendPilot project. This action cannot be undone.
+
+<Warning>
+Deleting an account will permanently remove all associated data including message history and campaign records. Use [Logout](/api-reference/endpoint/post-account-logout) if you only want to temporarily disconnect an account.
+</Warning>
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  LinkedIn account ID to remove.
+  
+  Example: `cljk3k2j30001...`
+</ParamField>
+
+## Response
+
+<ResponseField name="action" type="string" required>
+  Action performed.
+  
+  Values:
+  - `linkedin_account_deleted` - Account was successfully deleted
+  - `linkedin_account_doesn_t_exist` - Account was not found
+</ResponseField>
+
+<ResponseField name="linkedinAccountId" type="string">
+  Removed LinkedIn account ID (only present when account was deleted).
+</ResponseField>
+
+## Example Request
+
+```bash
+curl -X DELETE "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/clxxx123456" \
+  -H "X-API-KEY: YOUR_API_KEY"
+```
+
+## Example Response (Success)
+
+```json
+{
+  "action": "linkedin_account_deleted",
+  "linkedinAccountId": "clxxx123456"
+}
+```
+
+## Example Response (Not Found)
+
+```json
+{
+  "action": "linkedin_account_doesn_t_exist"
+}
+```
+
+## Deletion Effects
+
+When you delete an account:
+
+1. The LinkedIn session is terminated
+2. All associated message history is removed
+3. All campaign data for this account is deleted
+4. The account cannot be recovered
+5. An `account.deleted` webhook event is sent
+
+## Delete vs Logout
+
+| Action | Use Case | Reversible | Data Retained |
+|--------|----------|------------|---------------|
+| **Delete** | Permanently remove account | ❌ No | ❌ No |
+| **Logout** | Temporarily disconnect | ✅ Yes | ✅ Yes |
+
+## Implementation Example
+
+```javascript
+const axios = require('axios');
+
+async function removeLinkedInAccount(id) {
+  const url = `https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/${id}`;
+
+  try {
+    const response = await axios.delete(url, {
+      headers: {
+        'X-API-KEY': process.env.SENDPILOT_API_KEY
+      }
+    });
+
+    if (response.data.action === 'linkedin_account_deleted') {
+      console.log('Account deleted:', response.data.linkedinAccountId);
+      return { success: true, accountId: response.data.linkedinAccountId };
+    } else {
+      console.log('Account not found');
+      return { success: false, reason: 'not_found' };
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+// Safe deletion with confirmation
+async function safeDeleteAccount(id, confirmed = false) {
+  if (!confirmed) {
+    throw new Error('Deletion not confirmed. This action is irreversible.');
+  }
+  
+  // Pause any active campaigns first
+  await pauseCampaignsForAccount(id);
+  
+  // Delete the account
+  return await removeLinkedInAccount(id);
+}
+```
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | `linkedin_account_deleted` | Account deleted successfully |
+| 200 | `linkedin_account_doesn_t_exist` | Account was not found |
+| 401 | `Unauthorized` | Invalid or missing API key |
+| 403 | `Forbidden` | User does not have permission to remove this account |
+| 404 | `Not Found` | LinkedIn account not found |
+
+## Best Practices
+
+<Tip>
+Export any important data before deleting an account. Consider using Logout instead if you may need to reconnect the account later.
+</Tip>
+
+- Always confirm with the user before deleting
+- Pause active campaigns before deletion
+- Export message history if needed for compliance
+- Update your internal tracking immediately after deletion
+- Handle the `account.deleted` webhook to sync your systems
+
+## See Also
+
+- [Logout Account](/api-reference/endpoint/post-account-logout) - Temporarily disconnect (recommended)
+- [List LinkedIn Accounts](/api-reference/endpoint/get-accounts-linkedin) - View all accounts
+- [Connect LinkedIn Account](/api-reference/endpoint/post-account-connect-linkedin) - Add a new account

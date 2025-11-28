@@ -28,16 +28,22 @@
         "pages": [
           "api-reference/endpoint/post-connection-request",
           "api-reference/endpoint/post-message",
-          "api-reference/endpoint/get-messages"
+          "api-reference/endpoint/get-messages",
+          "api-reference/endpoint/get-connection-status"
         ]
       },
       {
         "group": "Accounts",
         "pages": [
           "api-reference/endpoint/get-account-status",
-          "api-reference/endpoint/post-account-logout",
+          "api-reference/endpoint/get-accounts-linkedin",
+          "api-reference/endpoint/get-accounts-linkedin-id",
           "api-reference/endpoint/post-account-connect-linkedin",
-          "api-reference/endpoint/post-account-reconnect-linkedin"
+          "api-reference/endpoint/post-account-checkpoint",
+          "api-reference/endpoint/post-account-checkpoint-resend",
+          "api-reference/endpoint/post-account-reconnect-linkedin",
+          "api-reference/endpoint/post-account-logout",
+          "api-reference/endpoint/delete-accounts-linkedin-id"
         ]
       },
       {
@@ -45,10 +51,20 @@
         "pages": [
           "api-reference/endpoint/post-webhooks-register",
           "api-reference/endpoint/delete-webhooks-unregister",
-          "api-reference/endpoint/get-webhooks-list",
+          "api-reference/endpoint/get-webhooks-list"
+        ]
+      },
+      {
+        "group": "Webhook Events",
+        "pages": [
           "api-reference/endpoint/post-webhooks-message-received",
+          "api-reference/endpoint/post-webhooks-message-sent",
+          "api-reference/endpoint/post-webhooks-linkedin-account-accepted",
+          "api-reference/endpoint/post-webhooks-connection-rejected",
           "api-reference/endpoint/post-webhooks-linkedin-account-status",
-          "api-reference/endpoint/post-webhooks-linkedin-account-accepted"
+          "api-reference/endpoint/post-webhooks-account-connected",
+          "api-reference/endpoint/post-webhooks-account-deleted",
+          "api-reference/endpoint/post-webhooks-profile-viewed"
         ]
       }
     ]
