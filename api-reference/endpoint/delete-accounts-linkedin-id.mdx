@@ -9,7 +9,7 @@ tags:
 Permanently delete a LinkedIn account from your SendPilot project. This action cannot be undone.
 
 <Warning>
-Deleting an account will permanently remove all associated data including message history and campaign records. Use [Logout](/api-reference/endpoint/post-account-logout) if you only want to temporarily disconnect an account.
+Deleting an account will permanently remove all associated data including message history and campaign records. This action cannot be undone.
 </Warning>
 
 ## Path Parameters
@@ -68,13 +68,6 @@ When you delete an account:
 4. The account cannot be recovered
 5. An `account.deleted` webhook event is sent
 
-## Delete vs Logout
-
-| Action | Use Case | Reversible | Data Retained |
-|--------|----------|------------|---------------|
-| **Delete** | Permanently remove account | ❌ No | ❌ No |
-| **Logout** | Temporarily disconnect | ✅ Yes | ✅ Yes |
-
 ## Implementation Example
 
 ```javascript
@@ -129,7 +122,7 @@ async function safeDeleteAccount(id, confirmed = false) {
 ## Best Practices
 
 <Tip>
-Export any important data before deleting an account. Consider using Logout instead if you may need to reconnect the account later.
+Export any important data before deleting an account. This action cannot be undone.
 </Tip>
 
 - Always confirm with the user before deleting
@@ -140,6 +133,5 @@ Export any important data before deleting an account. Consider using Logout inst
 
 ## See Also
 
-- [Logout Account](/api-reference/endpoint/post-account-logout) - Temporarily disconnect (recommended)
 - [List LinkedIn Accounts](/api-reference/endpoint/get-accounts-linkedin) - View all accounts
 - [Connect LinkedIn Account](/api-reference/endpoint/post-account-connect-linkedin) - Add a new account

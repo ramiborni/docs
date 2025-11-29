@@ -14,12 +14,6 @@ Register a webhook URL to receive real-time event notifications from SendPilot. 
   Example: `https://your-app.com/webhooks/sendpilot`
 </ParamField>
 
-<ParamField body="secret" type="string">
-  Webhook secret for signature verification. Used to sign webhook payloads for security.
-  
-  Example: `your_webhook_secret_123`
-</ParamField>
-
 <ParamField body="events" type="array<string>" required>
   List of event types to subscribe to. Accepts both formats: UPPERCASE_UNDERSCORE (MESSAGE_RECEIVED) or lowercase.dot (message.received). Use `*` for all events.
   
@@ -62,7 +56,6 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://your-app.com/webhooks/sendpilot",
-    "secret": "your_webhook_secret_123",
     "events": ["MESSAGE_RECEIVED", "CONNECTION_ACCEPTED", "ACCOUNT_DISCONNECTED"]
   }'
 ```
@@ -101,53 +94,6 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 | `ACCOUNT_DELETED` | Account permanently deleted | [Account Deleted](/api-reference/endpoint/post-webhooks-account-deleted) |
 
 
-## Webhook Security
-
-<Warning>
-Always implement signature verification using the provided webhook secret to ensure requests are from SendPilot.
-</Warning>
-
-### Signature Verification Example
-
-```javascript
-const crypto = require('crypto');
-
-function verifyWebhookSignature(payload, signature, secret) {
-  const parts = signature.split(',');
-  const timestamp = parts[0].split('=')[1];
-  const signatureHash = parts[1].split('=')[1];
-  
-  // Prevent replay attacks - reject old timestamps
-  const age = Date.now() / 1000 - parseInt(timestamp);
-  if (age > 300) { // 5 minutes
-    return false;
-  }
-  
-  const signedPayload = `${timestamp}.${JSON.stringify(payload)}`;
-  const expectedHash = crypto
-    .createHmac('sha256', secret)
-    .update(signedPayload)
-    .digest('hex');
-  
-  return crypto.timingSafeEqual(
-    Buffer.from(expectedHash),
-    Buffer.from(signatureHash)
-  );
-}
-
-// In your webhook handler
-app.post('/webhooks/sendpilot', (req, res) => {
-  const signature = req.headers['x-sendpilot-signature'];
-  
-  if (!verifyWebhookSignature(req.body, signature, 'your_webhook_secret_123')) {
-    return res.status(401).json({ error: 'Invalid signature' });
-  }
-  
-  // Process webhook...
-  res.status(200).json({ received: true });
-});
-```
-
 ## Best Practices
 
 <Tip>
@@ -155,7 +101,6 @@ Subscribe only to events you need. Using `*` for all events may result in unnece
 </Tip>
 
 - **Use HTTPS**: Webhook endpoints must use TLS/SSL encryption
-- **Verify signatures**: Always validate the `X-SendPilot-Signature` header
 - **Implement idempotency**: Use the `eventId` field to prevent duplicate processing
 - **Respond quickly**: Return `200 OK` within 5 seconds to acknowledge receipt
 - **Process asynchronously**: Queue webhook events for background processing
@@ -168,8 +113,7 @@ Your webhook endpoint must:
 1. Accept POST requests with JSON payloads
 2. Return `200 OK` status within 5 seconds
 3. Use HTTPS (TLS/SSL)
-4. Verify webhook signatures for security
-5. Respond with `{ "received": true }` to acknowledge receipt
+4. Respond with `{ "received": true }` to acknowledge receipt
 
 ## Common Errors
 
@@ -187,14 +131,12 @@ You can register multiple webhook URLs for different purposes:
 // Register webhook for production
 await registerWebhook({
   url: 'https://your-app.com/webhooks/production',
-  secret: 'prod_secret',
   events: ['MESSAGE_RECEIVED']
 });
 
 // Register webhook for analytics
 await registerWebhook({
   url: 'https://analytics.your-app.com/webhooks',
-  secret: 'analytics_secret',
   events: ['*']
 });
 ```

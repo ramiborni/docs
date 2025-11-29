@@ -14,14 +14,6 @@ Remove a webhook URL from receiving event notifications. Requires X-API-KEY auth
   Example: `https://your-app.com/webhooks/sendpilot`
 </ParamField>
 
-## Query Parameters
-
-<ParamField query="environment" type="string">
-  Environment (sandbox or production). Use different API keys for different environments.
-  
-  Values: `sandbox` | `production`
-</ParamField>
-
 ## Response
 
 <ResponseField name="status" type="string">
@@ -86,7 +78,6 @@ async function migrateWebhook() {
   // Register new webhook
   await registerWebhook({
     url: newWebhook,
-    secret: 'new_secret',
     events: ['MESSAGE_RECEIVED', 'CONNECTION_ACCEPTED']
   });
 }
@@ -151,21 +142,6 @@ async function gracefulWebhookRemoval(webhookUrl) {
   
   console.log('Webhook removed gracefully');
 }
-```
-
-## Environment Considerations
-
-When using environment-specific webhooks:
-
-```javascript
-// Unregister sandbox webhook
-await unregisterWebhook({
-  url: 'https://staging.your-app.com/webhooks',
-  environment: 'sandbox'
-});
-
-// Production webhook remains active
-// 'https://your-app.com/webhooks' continues receiving events
 ```
 
 ## See Also

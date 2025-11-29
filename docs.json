@@ -42,7 +42,6 @@
           "api-reference/endpoint/post-account-checkpoint",
           "api-reference/endpoint/post-account-checkpoint-resend",
           "api-reference/endpoint/post-account-reconnect-linkedin",
-          "api-reference/endpoint/post-account-logout",
           "api-reference/endpoint/delete-accounts-linkedin-id"
         ]
       },

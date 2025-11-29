@@ -172,33 +172,6 @@ paths:
           description: Invalid query parameters
         '401':
           description: Invalid or missing API key
-  /accounts/logout:
-    post:
-      summary: Logout LinkedIn account
-      description: Logout and disconnect a LinkedIn account from SendPilot
-      operationId: AccountsController_logoutAccount
-      tags:
-        - Accounts
-      security:
-        - apiKey: []
-      requestBody:
-        required: true
-        description: Account logout details
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AccountLogoutDto'
-      responses:
-        '200':
-          description: Account logged out successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AccountLogoutResponseDto'
-        '400':
-          description: Invalid request data
-        '401':
-          description: Invalid or missing API key
   /accounts/connect-linkedin:
     post:
       summary: Connect LinkedIn account
@@ -679,24 +652,6 @@ components:
           description: Array of account statuses
           items:
             $ref: '#/components/schemas/AccountStatusDto'
-    AccountLogoutDto:
-      type: object
-      required:
-        - linkedinAccountId
-      properties:
-        linkedinAccountId:
-          type: string
-          description: LinkedIn Account ID to logout
-          example: acc_123456
-    AccountLogoutResponseDto:
-      type: object
-      required:
-        - action
-      properties:
-        action:
-          type: string
-          description: Action performed
-          example: account_logged_out
     ProxyDto:
       type: object
       required:
@@ -758,10 +713,6 @@ components:
           type: string
           description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location. Case-insensitive (e.g., "US" or "us" both work).
           example: us
-        ip:
-          type: string
-          description: IPv4 address to infer proxy location
-          example: 192.168.1.1
         proxy:
           description: Custom proxy configuration. If not provided, an automated BrightData proxy will be used based on the country code.
           allOf:
@@ -945,7 +896,6 @@ components:
           description: LinkedIn account details
           example:
             id: cljk3k2j30001...
-            providerId: ACoAA...
             publicIdentifier: john-doe
             firstName: John
             lastName: Doe
@@ -1012,10 +962,6 @@ components:
           type: string
           description: ISO 3166-1 A-2 country code (2 characters) to be set as proxy location. Case-insensitive (e.g., "US" or "us" both work).
           example: us
-        ip:
-          type: string
-          description: IPv4 address to infer proxy location
-          example: 192.168.1.1
         proxy:
           description: Custom proxy configuration. If not provided, an automated BrightData proxy will be used based on the country code.
           allOf:
@@ -1045,10 +991,6 @@ components:
           type: string
           description: Webhook URL to receive events
           example: https://your-app.com/webhooks/sendpilot
-        secret:
-          type: string
-          description: Webhook secret for signature verification (optional, stored for reference only - Svix generates the actual signing secret)
-          example: my-webhook-identifier
         events:
           type: array
           description: 'List of event types to subscribe to. Accepts both formats: UPPERCASE_UNDERSCORE (MESSAGE_RECEIVED) or lowercase.dot (message.received). Use * for all events.'

@@ -46,12 +46,6 @@ Register a LinkedIn session with SendPilot. Use this endpoint when onboarding a 
   Example: `us`
 </ParamField>
 
-<ParamField body="ip" type="string">
-  IPv4 address to infer proxy location.
-  
-  Example: `192.168.1.1`
-</ParamField>
-
 <ParamField body="proxy" type="object">
   Custom proxy configuration. If not provided, an automated BrightData proxy will be used based on the country code.
 
@@ -250,4 +244,3 @@ Always use HTTPS for API requests. Never log or expose credentials in client-sid
 
 - [Solve Checkpoint](/api-reference/endpoint/post-account-checkpoint) - Solve verification challenges
 - [Get Account Status](/api-reference/endpoint/get-account-status) - Verify account health and quota
-- [Logout Account](/api-reference/endpoint/post-account-logout) - Disconnect an account
