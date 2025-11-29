@@ -585,6 +585,9 @@ components:
       required:
         - conversations
         - page
+        - hasMore
+        - totalCount
+        - totalPages
       properties:
         conversations:
           type: array
@@ -595,6 +598,18 @@ components:
           type: number
           description: Current page number
           example: 0
+        hasMore:
+          type: boolean
+          description: Indicates if there are more pages of results available
+          example: true
+        totalCount:
+          type: number
+          description: Total number of conversations matching the query
+          example: 42
+        totalPages:
+          type: number
+          description: Total number of pages available
+          example: 3
     ConnectionStatusResponseDto:
       type: object
       required:

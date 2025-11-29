@@ -99,6 +99,18 @@ This endpoint is intended for occasional polling, not real-time message retrieva
   Current page number (starts at 0).
 </ResponseField>
 
+<ResponseField name="hasMore" type="boolean" required>
+  Indicates if there are more pages of results available.
+</ResponseField>
+
+<ResponseField name="totalCount" type="integer" required>
+  Total number of conversations matching the query.
+</ResponseField>
+
+<ResponseField name="totalPages" type="integer" required>
+  Total number of pages available.
+</ResponseField>
+
 ## Example Request
 
 ```bash
@@ -140,7 +152,10 @@ curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral
       "unreadCount": 0
     }
   ],
-  "page": 0
+  "page": 0,
+  "hasMore": true,
+  "totalCount": 42,
+  "totalPages": 3
 }
 ```
 
