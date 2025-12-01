@@ -37,11 +37,15 @@ Refresh LinkedIn session cookies or credentials for an existing managed account.
 <ParamField body="accessToken" type="string">
   LinkedIn access token for authentication.
   
+  **How to obtain**: This value can be extracted from the `li_at` cookie in your LinkedIn session. Login to LinkedIn in your browser, open DevTools (F12), go to Application/Storage → Cookies, and copy the value of the `li_at` cookie.
+  
   Example: `AQV8...`
 </ParamField>
 
 <ParamField body="premiumToken" type="string">
-  LinkedIn premium token (if applicable).
+  LinkedIn premium token (if applicable). **Required for Sales Navigator or Recruiter accounts**.
+  
+  **How to obtain**: This value can be extracted from the `li_a` cookie in your LinkedIn session. Login to LinkedIn in your browser, open DevTools (F12), go to Application/Storage → Cookies, and copy the value of the `li_a` cookie.
   
   Example: `premium_token_123`
 </ParamField>

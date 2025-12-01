@@ -31,11 +31,15 @@ Register a LinkedIn session with SendPilot. Use this endpoint when onboarding a 
 <ParamField body="accessToken" type="string">
   LinkedIn access token for authentication (alternative to username/password). Optional, but required if premiumToken is provided.
   
+  **How to obtain**: This value can be extracted from the `li_at` cookie in your LinkedIn session. Login to LinkedIn in your browser, open DevTools (F12), go to Application/Storage → Cookies, and copy the value of the `li_at` cookie.
+  
   Example: `AQV8...`
 </ParamField>
 
 <ParamField body="premiumToken" type="string">
-  LinkedIn premium token. Optional, but if provided, accessToken must also be provided.
+  LinkedIn premium token. Optional, but if provided, accessToken must also be provided. **Required for Sales Navigator or Recruiter accounts**.
+  
+  **How to obtain**: This value can be extracted from the `li_a` cookie in your LinkedIn session. Login to LinkedIn in your browser, open DevTools (F12), go to Application/Storage → Cookies, and copy the value of the `li_a` cookie.
   
   Example: `premium_token_123`
 </ParamField>
@@ -146,6 +150,9 @@ Provide your LinkedIn email/phone and password:
 Use LinkedIn session tokens for authentication:
 - **Pros**: More secure, no password storage
 - **Cons**: Tokens expire and need refresh
+- **How to get tokens**: 
+  - `accessToken`: Extract from the `li_at` cookie in your browser after logging into LinkedIn
+  - `premiumToken`: Extract from the `li_a` cookie (required for Sales Navigator/Recruiter accounts)
 
 ### 3. Combined Method
 Use both credentials and tokens for maximum reliability:
