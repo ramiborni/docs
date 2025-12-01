@@ -82,6 +82,10 @@ This endpoint is intended for occasional polling, not real-time message retrieva
         <ResponseField name="sentAt" type="string" required>
           Timestamp when message was sent (ISO-8601 format).
         </ResponseField>
+        
+        <ResponseField name="direction" type="string" required>
+          Message direction. Possible values: `sent` (sent by the authenticated LinkedIn account) or `received` (received from another user).
+        </ResponseField>
       </Expandable>
     </ResponseField>
     
@@ -139,13 +143,15 @@ curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral
           "messageId": "msg_abc123",
           "senderProfileUrl": "clxxx123456",
           "text": "Hi John, I wanted to reach out about a great opportunity.",
-          "sentAt": "2025-11-05T10:00:00Z"
+          "sentAt": "2025-11-05T10:00:00Z",
+          "direction": "sent"
         },
         {
           "messageId": "msg_def456",
           "senderProfileUrl": "https://www.linkedin.com/in/john-doe",
           "text": "Hello, thanks for connecting!",
-          "sentAt": "2025-11-05T10:30:00Z"
+          "sentAt": "2025-11-05T10:30:00Z",
+          "direction": "received"
         }
       ],
       "lastMessageAt": "2025-11-05T10:30:00Z",
