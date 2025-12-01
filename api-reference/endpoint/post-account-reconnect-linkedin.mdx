@@ -16,13 +16,13 @@ Refresh LinkedIn session cookies or credentials for an existing managed account.
   Example: `clxxx123456`
 </ParamField>
 
-<ParamField body="username" type="string" required>
+<ParamField body="username" type="string">
   LinkedIn username - should be either an email address or a phone number.
   
   Example: `user@example.com`
 </ParamField>
 
-<ParamField body="password" type="string" required>
+<ParamField body="password" type="string">
   LinkedIn account password.
   
   Example: `securepassword123`
@@ -46,7 +46,7 @@ Refresh LinkedIn session cookies or credentials for an existing managed account.
   Example: `premium_token_123`
 </ParamField>
 
-<ParamField body="country" type="string">
+<ParamField body="country" type="string" required>
   ISO 3166-1 A-2 country code (2 characters) to be set as proxy location.
   
   Example: `US`
@@ -114,7 +114,8 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
     "linkedinAccountId": "clxxx123456",
     "username": "user@example.com",
     "password": "securepassword123",
-    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "country": "US"
   }'
 ```
 
