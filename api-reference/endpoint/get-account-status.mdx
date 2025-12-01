@@ -25,7 +25,7 @@ Query the health and capacity of a SendPilot-managed LinkedIn account. Use this 
     </ResponseField>
     
     <ResponseField name="status" type="string" required>
-      Account status: `active`, `inactive`, or `suspended`.
+      Account status (see status values below).
     </ResponseField>
     
     <ResponseField name="remainingConnectionRequests" type="integer" required>
@@ -60,7 +60,7 @@ curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral
   "accounts": [
     {
       "linkedinAccountId": "acc_123456",
-      "status": "active",
+      "status": "CONNECTED",
       "remainingConnectionRequests": 45,
       "remainingMessages": 150,
       "dailyConnectionCap": 50,
@@ -70,19 +70,20 @@ curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 }
 ```
 
-## Account Status Types
+## Account Status Values
 
-<ResponseField name="active" type="status">
-  **Active**: Account is connected and has available quota. Safe to send connection requests and messages.
-</ResponseField>
-
-<ResponseField name="inactive" type="status">
-  **Inactive**: Account is temporarily inactive and cannot send until reactivated.
-</ResponseField>
-
-<ResponseField name="suspended" type="status">
-  **Suspended**: Account has been suspended. Do not route new activity to this account.
-</ResponseField>
+| Status | Description | Can Send Messages |
+|--------|-------------|-------------------|
+| `CONNECTED` | Account is connected and operational | ✅ Yes |
+| `DISCONNECTED` | Account session has expired or been invalidated | ❌ No |
+| `PENDING_VERIFICATION` | Awaiting verification | ❌ No |
+| `TWO_FA_REQUIRED` | Two-factor authentication required | ❌ No |
+| `OTP_REQUIRED` | One-time password required | ❌ No |
+| `CAPTCHA_REQUIRED` | CAPTCHA challenge required | ❌ No |
+| `IN_APP_VALIDATION_REQUIRED` | In-app validation required | ❌ No |
+| `PHONE_REGISTER_REQUIRED` | Phone registration required | ❌ No |
+| `FAILED` | Connection failed | ❌ No |
+| `EXPIRED` | Session expired | ❌ No |
 
 ## Usage Monitoring
 
@@ -139,7 +140,7 @@ async function checkAccountStatus(linkedinAccountId) {
 async function sendCampaign(linkedinAccountId, leads) {
   const status = await checkAccountStatus(linkedinAccountId);
   
-  if (status.status !== 'active') {
+  if (status.status !== 'CONNECTED') {
     throw new Error(`Account is ${status.status}. Cannot send campaign.`);
   }
   
