@@ -127,7 +127,7 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 }
 ```
 
-## Example Response (Checkpoint Required)
+## Example Response (Checkpoint Required - SMS)
 
 ```json
 {
@@ -138,6 +138,27 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
   }
 }
 ```
+
+## Example Response (Checkpoint Required - CAPTCHA)
+
+When CAPTCHA verification is required, the response includes additional fields for the Arkose Labs widget:
+
+```json
+{
+  "action": "checkpoint_required",
+  "data": {
+    "linkedinAccountId": "clxxx123456",
+    "status": "CAPTCHA_REQUIRED",
+    "checkpointType": "CAPTCHA",
+    "checkpointData": "eyJzZXNzaW9uIjp7InB1YmxpY19rZXkiOi...",
+    "checkpointPublicKey": "3B7F8D4A-9C2E-4F1A-8B3D-5E6F7A8B9C0D"
+  }
+}
+```
+
+<Note>
+To solve CAPTCHA checkpoints, use the `checkpointData` and `checkpointPublicKey` to initialize the Arkose Labs widget, then submit the resulting token to the [Solve Checkpoint](/api-reference/endpoint/post-account-checkpoint) endpoint.
+</Note>
 
 ## Authentication Methods
 

@@ -532,6 +532,7 @@ components:
         - senderProfileUrl
         - text
         - sentAt
+        - direction
       properties:
         messageId:
           type: string
@@ -549,6 +550,13 @@ components:
           type: string
           description: Timestamp when message was sent
           example: 2025-11-05T10:30:00Z
+        direction:
+          type: string
+          description: Message direction
+          enum:
+            - sent
+            - received
+          example: received
     ConversationDto:
       type: object
       required:

@@ -93,11 +93,11 @@ Refresh LinkedIn session cookies or credentials for an existing managed account.
 ## Response
 
 <ResponseField name="action" type="string">
-  Action performed. Returns `account_reconnected` when the reconnection succeeds.
+  Action performed. Returns `account_reconnected` when the reconnection succeeds, or `checkpoint_required` if verification is needed.
 </ResponseField>
 
 <ResponseField name="data" type="object">
-  Account data returned after successful reconnection.
+  Account data returned after successful reconnection. If checkpoint_required, additional fields will be present.
 
   <Expandable title="Data object">
     <ResponseField name="linkedinAccountId" type="string">
@@ -123,7 +123,7 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
   }'
 ```
 
-## Example Response
+## Example Response (Success)
 
 ```json
 {
@@ -133,6 +133,39 @@ curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral
   }
 }
 ```
+
+## Example Response (Checkpoint Required - SMS)
+
+```json
+{
+  "action": "checkpoint_required",
+  "data": {
+    "linkedinAccountId": "clxxx123456",
+    "checkpointType": "SMS"
+  }
+}
+```
+
+## Example Response (Checkpoint Required - CAPTCHA)
+
+When CAPTCHA verification is required, the response includes additional fields for the Arkose Labs widget:
+
+```json
+{
+  "action": "checkpoint_required",
+  "data": {
+    "linkedinAccountId": "clxxx123456",
+    "status": "CAPTCHA_REQUIRED",
+    "checkpointType": "CAPTCHA",
+    "checkpointData": "eyJzZXNzaW9uIjp7InB1YmxpY19rZXkiOi...",
+    "checkpointPublicKey": "3B7F8D4A-9C2E-4F1A-8B3D-5E6F7A8B9C0D"
+  }
+}
+```
+
+<Note>
+To solve CAPTCHA checkpoints, use the `checkpointData` and `checkpointPublicKey` to initialize the Arkose Labs widget, then submit the resulting token to the [Solve Checkpoint](/api-reference/endpoint/post-account-checkpoint) endpoint.
+</Note>
 
 ## When to Use Reconnect
 
