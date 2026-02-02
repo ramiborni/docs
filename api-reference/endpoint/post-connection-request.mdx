@@ -26,6 +26,19 @@ Send a LinkedIn connection request to a target candidate. The request is queued 
   Example: `Hi John, I noticed we share similar interests in tech...`
 </ParamField>
 
+<ParamField body="_sandboxSimulate" type="string">
+  **Sandbox only.** Force a specific response scenario for testing. Ignored in production.
+  
+  Available values:
+  - `success` - Normal successful response (default)
+  - `rate_limit_exceeded` - Returns 429 with rate limit error
+  - `account_not_found` - Returns 404 with account not found error
+  - `account_disconnected` - Returns 404 with account disconnected error
+  - `invalid_url` - Returns 400 with invalid URL error
+  
+  See [Sandbox Simulation](/docs/operations/sandbox-simulation) for details.
+</ParamField>
+
 ## Response
 
 <ResponseField name="action" type="string">
@@ -80,7 +93,11 @@ Connection notes are optional but highly recommended. Personalized connection re
 |--------|-------|-------------|
 | 200 | Success | Connection request sent successfully |
 | 400 | `Invalid request data` | The payload is invalid, malformed, or the note exceeds allowed limits |
+| 400 | `errors/invalid_url` | Invalid LinkedIn profile URL |
 | 401 | `Invalid or missing API key` | API authentication failed |
+| 404 | `linkedin_account_not_found` | The specified LinkedIn account does not exist or is not connected |
+| 404 | `linkedin_account_disconnected` | The specified LinkedIn account is disconnected |
+| 429 | `rate_limit_exceeded` | Daily connection request limit exceeded |
 
 ## Workflow Example
 
@@ -110,3 +127,4 @@ async function sendConnectionRequest(leadUrl, linkedinAccountId, note) {
 
 - [Account Status](/api-reference/endpoint/get-account-status) - Check available quota
 - [Connection Accepted Webhook](/api-reference/endpoint/post-webhooks-linkedin-account-accepted) - Get notified when connections are accepted
+- [Sandbox Simulation](/docs/operations/sandbox-simulation) - Test error scenarios in sandbox mode

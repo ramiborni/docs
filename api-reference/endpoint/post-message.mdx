@@ -26,6 +26,19 @@ Send a message through a connected account managed by SendPilot.
   Example: `https://www.linkedin.com/in/john-doe`
 </ParamField>
 
+<ParamField body="_sandboxSimulate" type="string">
+  **Sandbox only.** Force a specific response scenario for testing. Ignored in production.
+  
+  Available values:
+  - `success` - Normal successful response (default)
+  - `rate_limit_exceeded` - Returns 429 with rate limit error
+  - `account_not_found` - Returns 404 with account not found error
+  - `account_disconnected` - Returns 404 with account disconnected error
+  - `account_not_connected` - Returns 400 with account not connected error
+  
+  See [Sandbox Simulation](/docs/operations/sandbox-simulation) for details.
+</ParamField>
+
 ## Response
 
 <ResponseField name="action" type="string">
@@ -82,7 +95,11 @@ Use the [Message Received Webhook](/api-reference/endpoint/post-webhooks-message
 |--------|-------|-------------|
 | 201 | Success | Message accepted for processing |
 | 400 | `Invalid request data` | Payload validation failed |
+| 400 | `errors/account_not_connected` | LinkedIn account is not fully connected |
 | 401 | `Invalid or missing API key` | Authentication or session problem preventing delivery |
+| 404 | `linkedin_account_not_found` | The specified LinkedIn account does not exist or is not connected |
+| 404 | `linkedin_account_disconnected` | The specified LinkedIn account is disconnected |
+| 429 | `rate_limit_exceeded` | Daily message limit exceeded |
 
 ## Workflow Example
 
@@ -112,3 +129,4 @@ async function sendMessage(linkedinAccountId, leadUrl, messageText) {
 
 - [Get Messages](/api-reference/endpoint/get-messages) - Poll for message history
 - [Message Received Webhook](/api-reference/endpoint/post-webhooks-message-received) - Receive inbound messages with conversation context
+- [Sandbox Simulation](/docs/operations/sandbox-simulation) - Test error scenarios in sandbox mode

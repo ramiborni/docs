@@ -84,6 +84,23 @@ Register a LinkedIn session with SendPilot. Use this endpoint when onboarding a 
   </Expandable>
 </ParamField>
 
+<ParamField body="_sandboxSimulate" type="string">
+  **Sandbox only.** Force a specific response scenario for testing. Ignored in production.
+  
+  Available values:
+  - `success` - Normal successful connection (default)
+  - `checkpoint_captcha` - Returns checkpoint with CAPTCHA required
+  - `checkpoint_2fa` - Returns checkpoint with two-factor authentication required
+  - `checkpoint_otp` - Returns checkpoint with email OTP required
+  - `checkpoint_sms` - Returns checkpoint with SMS verification required
+  - `checkpoint_in_app` - Returns checkpoint with in-app validation required
+  - `checkpoint_phone_register` - Returns checkpoint with phone registration required
+  - `invalid_credentials` - Returns 401 with invalid credentials error
+  - `account_locked` - Returns 403 with account locked error
+  
+  See [Sandbox Simulation](/docs/operations/sandbox-simulation) for details.
+</ParamField>
+
 ## Response
 
 <ResponseField name="action" type="string">
@@ -218,7 +235,9 @@ Store the `linkedinAccountId` returned in the response for all future API calls 
 |--------|-------|-------------|
 | 200 | Success | Account connected successfully |
 | 400 | `Invalid request data` | Payload validation failures |
-| 401 | `Invalid or missing API key` | LinkedIn rejected credentials or API authentication failed |
+| 401 | `Invalid or missing API key` | API authentication failed |
+| 401 | `errors/invalid_credentials` | Invalid LinkedIn username or password |
+| 403 | `errors/account_locked` | LinkedIn account is temporarily locked |
 
 ## Workflow Example
 
@@ -272,3 +291,4 @@ Always use HTTPS for API requests. Never log or expose credentials in client-sid
 
 - [Solve Checkpoint](/api-reference/endpoint/post-account-checkpoint) - Solve verification challenges
 - [Get Account Status](/api-reference/endpoint/get-account-status) - Verify account health and quota
+- [Sandbox Simulation](/docs/operations/sandbox-simulation) - Test error scenarios in sandbox mode

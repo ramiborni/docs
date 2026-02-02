@@ -13,7 +13,8 @@
       {
         "group": "Operations",
         "pages": [
-          "docs/operations/rate-limits"
+          "docs/operations/rate-limits",
+          "docs/operations/sandbox-simulation"
         ]
       },
       {

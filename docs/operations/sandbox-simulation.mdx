@@ -1,0 +1,283 @@
+---
+title: "Sandbox Simulation"
+description: "Test error scenarios and edge cases using the sandbox simulation feature"
+---
+
+The SendPilot API includes a powerful sandbox simulation feature that allows developers to force specific error responses and edge cases during testing. This enables comprehensive testing of your error handling logic without triggering real errors or affecting production data.
+
+## Overview
+
+The `_sandboxSimulate` parameter is available on select endpoints and allows you to simulate various response scenarios. This is particularly useful for:
+
+- **Frontend development**: Test UI error states without backend changes
+- **Integration testing**: Verify your application handles all error cases correctly
+- **QA workflows**: Reproduce edge cases reliably during testing
+
+<Warning>
+The `_sandboxSimulate` parameter only works when using a **sandbox API key**. In production, this parameter is silently ignored.
+</Warning>
+
+## How It Works
+
+1. Include the `_sandboxSimulate` parameter in your request body
+2. Set the value to one of the supported simulation types for that endpoint
+3. The API returns the simulated response instead of processing the request normally
+
+```json
+{
+  "leadUrl": "https://www.linkedin.com/in/john-doe",
+  "linkedinAccountId": "abc123",
+  "_sandboxSimulate": "rate_limit_exceeded"
+}
+```
+
+<Info>
+If `_sandboxSimulate` is omitted or set to `success`, the endpoint behaves normally and processes your request as usual.
+</Info>
+
+## Supported Endpoints
+
+The sandbox simulation feature is available on the following endpoints:
+
+| Endpoint | Description |
+|----------|-------------|
+| [POST /messaging/connection-request](/api-reference/endpoint/post-connection-request) | Send connection requests |
+| [POST /messaging/message](/api-reference/endpoint/post-message) | Send messages |
+| [POST /accounts/connect-linkedin](/api-reference/endpoint/post-account-connect-linkedin) | Connect LinkedIn accounts |
+
+## Connection Request Simulations
+
+**Endpoint:** `POST /messaging/connection-request`
+
+| Simulation Value | HTTP Code | Description |
+|-----------------|-----------|-------------|
+| `success` | 200 | Normal successful response (default) |
+| `rate_limit_exceeded` | 429 | Daily connection request limit exceeded |
+| `account_not_found` | 404 | LinkedIn account does not exist or is not connected |
+| `account_disconnected` | 404 | LinkedIn account is disconnected |
+| `invalid_url` | 400 | Invalid LinkedIn profile URL |
+
+### Example: Simulate Rate Limit
+
+```bash
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/connection-request \
+  -H "X-API-KEY: YOUR_SANDBOX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "leadUrl": "https://www.linkedin.com/in/john-doe",
+    "linkedinAccountId": "clxxx123456",
+    "_sandboxSimulate": "rate_limit_exceeded"
+  }'
+```
+
+**Response (429):**
+```json
+{
+  "error": "rate_limit_exceeded",
+  "message": "Daily connection request limit exceeded. Please try again tomorrow.",
+  "used": 25,
+  "cap": 25,
+  "remaining": 0
+}
+```
+
+## Send Message Simulations
+
+**Endpoint:** `POST /messaging/message`
+
+| Simulation Value | HTTP Code | Description |
+|-----------------|-----------|-------------|
+| `success` | 200 | Normal successful response (default) |
+| `rate_limit_exceeded` | 429 | Daily message limit exceeded |
+| `account_not_found` | 404 | LinkedIn account does not exist or is not connected |
+| `account_disconnected` | 404 | LinkedIn account is disconnected |
+| `account_not_connected` | 400 | LinkedIn account is not fully connected |
+
+### Example: Simulate Account Not Connected
+
+```bash
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/messaging/message \
+  -H "X-API-KEY: YOUR_SANDBOX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "linkedinAccountId": "clxxx123456",
+    "leadUrl": "https://www.linkedin.com/in/john-doe",
+    "text": "Hello!",
+    "_sandboxSimulate": "account_not_connected"
+  }'
+```
+
+**Response (400):**
+```json
+{
+  "error": "errors/account_not_connected",
+  "message": "LinkedIn account is not fully connected. Please complete the connection process."
+}
+```
+
+## Connect LinkedIn Account Simulations
+
+**Endpoint:** `POST /accounts/connect-linkedin`
+
+This endpoint supports simulating various checkpoint scenarios that occur during LinkedIn authentication:
+
+| Simulation Value | HTTP Code | Description |
+|-----------------|-----------|-------------|
+| `success` | 200 | Normal successful connection (default) |
+| `checkpoint_captcha` | 200 | CAPTCHA verification required |
+| `checkpoint_2fa` | 200 | Two-factor authentication required |
+| `checkpoint_otp` | 200 | Email OTP verification required |
+| `checkpoint_sms` | 200 | SMS verification required |
+| `checkpoint_in_app` | 200 | In-app validation required |
+| `checkpoint_phone_register` | 200 | Phone registration required |
+| `invalid_credentials` | 401 | Invalid username or password |
+| `account_locked` | 403 | LinkedIn account is temporarily locked |
+
+### Example: Simulate CAPTCHA Checkpoint
+
+```bash
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/connect-linkedin \
+  -H "X-API-KEY: YOUR_SANDBOX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "user@example.com",
+    "password": "password123",
+    "userAgent": "Mozilla/5.0...",
+    "country": "us",
+    "_sandboxSimulate": "checkpoint_captcha"
+  }'
+```
+
+**Response (200):**
+```json
+{
+  "action": "checkpoint_required",
+  "data": {
+    "linkedinAccountId": "sandbox_sim_123",
+    "status": "CAPTCHA_REQUIRED",
+    "checkpointType": "CAPTCHA",
+    "checkpointPublicKey": "3B7F8D4A-9C2E-4F1A-8B3D-5E6F7A8B9C0D",
+    "checkpointData": "eyJzZXNzaW9uIjp7InB1YmxpY19rZXkiOi..."
+  }
+}
+```
+
+### Example: Simulate Two-Factor Authentication
+
+```bash
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/connect-linkedin \
+  -H "X-API-KEY: YOUR_SANDBOX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "user@example.com",
+    "password": "password123",
+    "userAgent": "Mozilla/5.0...",
+    "country": "us",
+    "_sandboxSimulate": "checkpoint_2fa"
+  }'
+```
+
+**Response (200):**
+```json
+{
+  "action": "checkpoint_required",
+  "data": {
+    "linkedinAccountId": "sandbox_sim_123",
+    "status": "TWO_FA_REQUIRED",
+    "checkpointType": "2FA"
+  }
+}
+```
+
+### Example: Simulate Invalid Credentials
+
+```bash
+curl -X POST https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/connect-linkedin \
+  -H "X-API-KEY: YOUR_SANDBOX_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "user@example.com",
+    "password": "wrongpassword",
+    "userAgent": "Mozilla/5.0...",
+    "country": "us",
+    "_sandboxSimulate": "invalid_credentials"
+  }'
+```
+
+**Response (401):**
+```json
+{
+  "error": "errors/invalid_credentials",
+  "message": "Invalid username or password. Please check your credentials and try again."
+}
+```
+
+## Error Handling
+
+If you provide an invalid simulation value, the API returns a `400 Bad Request` error:
+
+```json
+{
+  "error": "invalid_simulation_value",
+  "message": "The provided _sandboxSimulate value is not supported for this endpoint",
+  "validValues": ["success", "rate_limit_exceeded", "account_not_found", "..."]
+}
+```
+
+## Best Practices
+
+<Tip>
+Create a test suite that cycles through all simulation values for each endpoint to ensure your application handles every error case gracefully.
+</Tip>
+
+1. **Comprehensive testing**: Test all simulation values for each endpoint you integrate with
+2. **Error UI states**: Use simulations to develop and test error UI components
+3. **Retry logic**: Verify your retry mechanisms work correctly with rate limit simulations
+4. **Checkpoint flows**: Test your complete checkpoint handling flow using the various checkpoint simulations
+5. **CI/CD integration**: Include sandbox simulation tests in your automated test pipelines
+
+## Workflow Example
+
+```javascript
+const axios = require('axios');
+
+// Test error handling for connection requests
+async function testConnectionRequestErrors() {
+  const baseUrl = 'https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin';
+  const scenarios = [
+    'rate_limit_exceeded',
+    'account_not_found', 
+    'account_disconnected',
+    'invalid_url'
+  ];
+
+  for (const scenario of scenarios) {
+    try {
+      await axios.post(`${baseUrl}/messaging/connection-request`, {
+        leadUrl: 'https://www.linkedin.com/in/test-user',
+        linkedinAccountId: 'test123',
+        _sandboxSimulate: scenario
+      }, {
+        headers: {
+          'X-API-KEY': process.env.SANDBOX_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      });
+    } catch (error) {
+      console.log(`Scenario: ${scenario}`);
+      console.log(`Status: ${error.response.status}`);
+      console.log(`Error: ${JSON.stringify(error.response.data)}`);
+      console.log('---');
+    }
+  }
+}
+
+testConnectionRequestErrors();
+```
+
+## See Also
+
+- [Rate Limits](/docs/operations/rate-limits) - Understanding daily quotas
+- [Connect LinkedIn Account](/api-reference/endpoint/post-account-connect-linkedin) - Account connection flow
+- [Send Connection Request](/api-reference/endpoint/post-connection-request) - Connection request endpoint
+- [Send Message](/api-reference/endpoint/post-message) - Messaging endpoint
