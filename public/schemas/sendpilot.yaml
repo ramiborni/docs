@@ -277,8 +277,8 @@ paths:
           description: Unauthorized - Invalid or missing API key
         '403':
           description: Forbidden - User does not have access to this project
-  /accounts/linkedin/{id}/profile/{linkedinProfileUrl}:
-    get:
+  /accounts/linkedin/{id}/profile:
+    post:
       summary: Get LinkedIn Profile Data
       description: Fetch detailed profile data for a LinkedIn user including work experience, education, skills, certifications, recommendations, and more
       operationId: AccountsController_getLinkedInProfileData
@@ -294,13 +294,13 @@ paths:
           schema:
             type: string
             example: cml565gii0000novqavcdaw1i
-        - name: linkedinProfileUrl
-          required: true
-          in: path
-          description: Full LinkedIn profile URL (must be URL-encoded)
-          schema:
-            type: string
-            example: https%3A%2F%2Fwww.linkedin.com%2Fin%2Fjohndoe
+      requestBody:
+        required: true
+        description: LinkedIn profile URL to fetch data for
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GetLinkedInProfileDataDto'
       responses:
         '200':
           description: Profile data retrieved successfully
@@ -1143,6 +1143,15 @@ components:
           description: List of registered webhooks
           items:
             $ref: '#/components/schemas/WebhookItemDto'
+    GetLinkedInProfileDataDto:
+      type: object
+      required:
+        - linkedinProfileUrl
+      properties:
+        linkedinProfileUrl:
+          type: string
+          description: LinkedIn profile URL of the user to fetch data for
+          example: https://www.linkedin.com/in/johndoe
     GetLinkedInProfileDataResponseDto:
       type: object
       required:

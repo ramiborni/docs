@@ -1,6 +1,6 @@
 ---
 title: "Get LinkedIn Profile Data"
-openapi: "GET /accounts/linkedin/{id}/profile/{linkedinProfileUrl}"
+openapi: "POST /accounts/linkedin/{id}/profile"
 description: "Fetch detailed profile data for a LinkedIn user including work experience, education, skills, and more"
 tags:
   - accounts
@@ -16,10 +16,12 @@ Fetches detailed profile data for a LinkedIn user. This endpoint retrieves compr
   Example: `cml565gii0000novqavcdaw1i`
 </ParamField>
 
-<ParamField path="linkedinProfileUrl" type="string" required>
-  Full LinkedIn profile URL. **Must be URL-encoded**.
+## Request Body
+
+<ParamField body="linkedinProfileUrl" type="string" required>
+  LinkedIn profile URL of the user to fetch data for.
   
-  Example: `https%3A%2F%2Fwww.linkedin.com%2Fin%2Fjohndoe`
+  Example: `https://www.linkedin.com/in/johndoe`
 </ParamField>
 
 ## Supported LinkedIn URL Formats
@@ -99,8 +101,12 @@ Quota resets daily at midnight UTC. Each successful profile fetch counts as 1 re
 ## Example Request
 
 ```bash
-curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/cml565gii0000novqavcdaw1i/profile/https%3A%2F%2Fwww.linkedin.com%2Fin%2Fjohndoe" \
-  -H "X-API-KEY: YOUR_API_KEY"
+curl -X POST "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/cml565gii0000novqavcdaw1i/profile" \
+  -H "X-API-KEY: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "linkedinProfileUrl": "https://www.linkedin.com/in/johndoe"
+  }'
 ```
 
 ## Example Response
@@ -284,13 +290,15 @@ curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral
 const axios = require('axios');
 
 async function getLinkedInProfileData(accountId, linkedinProfileUrl) {
-  const encodedUrl = encodeURIComponent(linkedinProfileUrl);
-  const url = `https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/${accountId}/profile/${encodedUrl}`;
+  const url = `https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/${accountId}/profile`;
 
   try {
-    const response = await axios.get(url, {
+    const response = await axios.post(url, {
+      linkedinProfileUrl
+    }, {
       headers: {
-        'X-API-KEY': process.env.SENDPILOT_API_KEY
+        'X-API-KEY': process.env.SENDPILOT_API_KEY,
+        'Content-Type': 'application/json'
       }
     });
 
