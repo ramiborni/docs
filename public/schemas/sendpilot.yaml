@@ -277,6 +277,53 @@ paths:
           description: Unauthorized - Invalid or missing API key
         '403':
           description: Forbidden - User does not have access to this project
+  /accounts/linkedin/{id}/profile/{linkedinProfileUrl}:
+    get:
+      summary: Get LinkedIn Profile Data
+      description: Fetch detailed profile data for a LinkedIn user including work experience, education, skills, certifications, recommendations, and more
+      operationId: AccountsController_getLinkedInProfileData
+      tags:
+        - Accounts
+      security:
+        - apiKey: []
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: LinkedIn Account ID (your connected account)
+          schema:
+            type: string
+            example: cml565gii0000novqavcdaw1i
+        - name: linkedinProfileUrl
+          required: true
+          in: path
+          description: Full LinkedIn profile URL (must be URL-encoded)
+          schema:
+            type: string
+            example: https%3A%2F%2Fwww.linkedin.com%2Fin%2Fjohndoe
+      responses:
+        '200':
+          description: Profile data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetLinkedInProfileDataResponseDto'
+        '400':
+          description: Account disconnected
+        '401':
+          description: Unauthorized - Invalid or missing API key, or invalid environment
+        '403':
+          description: Forbidden - Access denied to account or profile
+        '404':
+          description: Not Found - Account or profile not found
+        '422':
+          description: Unprocessable Entity - Invalid recipient
+        '429':
+          description: Too Many Requests - Quota exceeded or rate limited
+        '500':
+          description: Internal Server Error
+        '503':
+          description: Service Unavailable
   /accounts/linkedin/{id}:
     get:
       summary: Get LinkedIn account by ID
@@ -1096,3 +1143,515 @@ components:
           description: List of registered webhooks
           items:
             $ref: '#/components/schemas/WebhookItemDto'
+    GetLinkedInProfileDataResponseDto:
+      type: object
+      required:
+        - profile
+        - quota
+      properties:
+        profile:
+          $ref: '#/components/schemas/LinkedInProfileDto'
+        quota:
+          $ref: '#/components/schemas/ProfileQuotaDto'
+    LinkedInProfileDto:
+      type: object
+      properties:
+        provider:
+          type: string
+          description: Provider name
+          example: LINKEDIN
+        providerId:
+          type: string
+          description: LinkedIn provider ID
+          example: ABC123XYZ
+        entityUrn:
+          type: string
+          description: LinkedIn entity URN
+          example: urn:li:fs_miniProfile:ABC123XYZ
+        objectUrn:
+          type: string
+          description: LinkedIn object URN
+          example: urn:li:member:123456789
+        firstName:
+          type: string
+          description: First name
+          example: John
+        lastName:
+          type: string
+          description: Last name
+          example: Doe
+        profilePictureUrl:
+          type: string
+          description: Profile picture URL
+          example: https://media.licdn.com/dms/image/v2/profile.jpg
+        publicProfileUrl:
+          type: string
+          description: Public LinkedIn profile URL
+          example: https://www.linkedin.com/in/johndoe
+        publicIdentifier:
+          type: string
+          description: Public identifier (username)
+          example: johndoe
+        headline:
+          type: string
+          description: Professional headline
+          example: Senior Software Engineer at Acme Corp
+        location:
+          type: string
+          description: Location
+          example: San Francisco Bay Area
+        countryCode:
+          type: string
+          description: Country code
+          example: US
+        industry:
+          type: string
+          description: Industry
+          example: Computer Software
+        summary:
+          type: string
+          description: Profile summary/about section
+          example: Experienced software engineer with 10+ years...
+        email:
+          type: string
+          description: Email address
+          example: john.doe@example.com
+        phoneNumber:
+          type: string
+          description: Phone number
+          example: +1-555-123-4567
+        birthDate:
+          type: string
+          description: Birth date
+          example: 1990-01-15
+        premium:
+          type: boolean
+          description: Whether account has LinkedIn Premium
+          example: true
+        openProfile:
+          type: boolean
+          description: Whether profile is open
+          example: false
+        connectionCount:
+          type: number
+          description: Number of connections
+          example: 500
+        followerCount:
+          type: number
+          description: Number of followers
+          example: 1500
+        occupation:
+          type: string
+          description: Current occupation
+          example: Senior Software Engineer
+        workExperience:
+          type: array
+          description: Work experience entries
+          items:
+            $ref: '#/components/schemas/WorkExperienceDto'
+        education:
+          type: array
+          description: Education entries
+          items:
+            $ref: '#/components/schemas/EducationDto'
+        skills:
+          type: array
+          description: Skills with endorsement counts
+          items:
+            $ref: '#/components/schemas/SkillDto'
+        certifications:
+          type: array
+          description: Certifications
+          items:
+            $ref: '#/components/schemas/CertificationDto'
+        languages:
+          type: array
+          description: Languages and proficiency levels
+          items:
+            $ref: '#/components/schemas/LanguageDto'
+        projects:
+          type: array
+          description: Projects
+          items:
+            $ref: '#/components/schemas/ProjectDto'
+        recommendations:
+          $ref: '#/components/schemas/RecommendationsDto'
+        publications:
+          type: array
+          description: Publications
+          items:
+            $ref: '#/components/schemas/PublicationDto'
+        honors:
+          type: array
+          description: Honors and awards
+          items:
+            $ref: '#/components/schemas/HonorDto'
+        volunteerExperience:
+          type: array
+          description: Volunteer experience
+          items:
+            $ref: '#/components/schemas/VolunteerExperienceDto'
+        organizations:
+          type: array
+          description: Organizations
+          items:
+            $ref: '#/components/schemas/OrganizationDto'
+        recruiter:
+          $ref: '#/components/schemas/RecruiterDto'
+        salesNavigator:
+          $ref: '#/components/schemas/SalesNavigatorDto'
+    ProfileQuotaDto:
+      type: object
+      required:
+        - used
+        - remaining
+        - dailyCap
+      properties:
+        used:
+          type: number
+          description: Number of profile data requests made today
+          example: 5
+        remaining:
+          type: number
+          description: Number of requests remaining today
+          example: 95
+        dailyCap:
+          type: number
+          description: Maximum requests allowed per day
+          example: 100
+    WorkExperienceDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Job title
+          example: Senior Software Engineer
+        companyName:
+          type: string
+          description: Company name
+          example: Acme Corp
+        companyId:
+          type: string
+          description: Company ID
+          example: "123456"
+        companyLogoUrl:
+          type: string
+          description: Company logo URL
+          example: https://media.licdn.com/dms/image/company.jpg
+        location:
+          type: string
+          description: Job location
+          example: San Francisco, CA
+        startDate:
+          type: string
+          description: Start date (YYYY-MM format)
+          example: 2020-01
+        endDate:
+          type: string
+          nullable: true
+          description: End date (YYYY-MM format), null if current
+          example: null
+        isCurrent:
+          type: boolean
+          description: Whether this is current position
+          example: true
+        description:
+          type: string
+          description: Job description
+          example: Leading engineering team...
+        status:
+          type: string
+          description: Employment status
+          example: Full-time
+        industry:
+          type: array
+          items:
+            type: string
+          description: Industries
+          example: ["Technology"]
+        skills:
+          type: array
+          items:
+            type: string
+          description: Skills used in this role
+          example: ["JavaScript", "TypeScript"]
+    EducationDto:
+      type: object
+      properties:
+        schoolName:
+          type: string
+          description: School name
+          example: Stanford University
+        schoolId:
+          type: string
+          description: School ID
+          example: stanford123
+        schoolLogoUrl:
+          type: string
+          description: School logo URL
+          example: https://media.licdn.com/dms/image/stanford.jpg
+        degreeName:
+          type: string
+          description: Degree name
+          example: Bachelor of Science
+        fieldOfStudy:
+          type: string
+          description: Field of study
+          example: Computer Science
+        startDate:
+          type: string
+          description: Start date (YYYY-MM format)
+          example: 2012-09
+        endDate:
+          type: string
+          description: End date (YYYY-MM format)
+          example: 2016-06
+        description:
+          type: string
+          description: Description
+          example: "GPA: 3.9"
+        grade:
+          type: string
+          description: Grade
+          example: "3.9"
+        activities:
+          type: string
+          description: Activities and societies
+          example: Computer Science Club
+    SkillDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Skill name
+          example: JavaScript
+        endorsementCount:
+          type: number
+          description: Number of endorsements
+          example: 42
+    CertificationDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Certification name
+          example: AWS Solutions Architect
+        authority:
+          type: string
+          description: Issuing authority
+          example: Amazon Web Services
+        issueDate:
+          type: string
+          description: Issue date (YYYY-MM format)
+          example: 2022-03
+        expirationDate:
+          type: string
+          description: Expiration date (YYYY-MM format)
+          example: 2025-03
+        url:
+          type: string
+          description: Certification URL
+          example: https://www.credly.com/badges/aws
+        licenseNumber:
+          type: string
+          description: License number
+          example: AWS-SAA-12345
+    LanguageDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Language name
+          example: English
+        proficiency:
+          type: string
+          description: Proficiency level
+          enum:
+            - NATIVE_OR_BILINGUAL
+            - FULL_PROFESSIONAL
+            - PROFESSIONAL_WORKING
+            - LIMITED_WORKING
+            - ELEMENTARY
+          example: NATIVE_OR_BILINGUAL
+    ProjectDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Project title
+          example: E-commerce Platform
+        description:
+          type: string
+          description: Project description
+          example: Built a scalable e-commerce platform...
+        startDate:
+          type: string
+          description: Start date (YYYY-MM format)
+          example: 2021-06
+        endDate:
+          type: string
+          description: End date (YYYY-MM format)
+          example: 2022-01
+        url:
+          type: string
+          description: Project URL
+          example: https://github.com/example/project
+    RecommendationsDto:
+      type: object
+      properties:
+        givenTotalCount:
+          type: number
+          description: Total recommendations given
+          example: 5
+        given:
+          type: array
+          description: Recommendations given
+          items:
+            $ref: '#/components/schemas/RecommendationDto'
+        receivedTotalCount:
+          type: number
+          description: Total recommendations received
+          example: 12
+        received:
+          type: array
+          description: Recommendations received
+          items:
+            $ref: '#/components/schemas/RecommendationDto'
+    RecommendationDto:
+      type: object
+      properties:
+        caption:
+          type: string
+          description: Recommendation caption
+          example: Recommended by John
+        text:
+          type: string
+          description: Recommendation text
+          example: Great team player...
+        actor:
+          $ref: '#/components/schemas/RecommendationActorDto'
+    RecommendationActorDto:
+      type: object
+      properties:
+        firstName:
+          type: string
+          description: First name
+          example: Jane
+        lastName:
+          type: string
+          description: Last name
+          example: Smith
+        headline:
+          type: string
+          description: Headline
+          example: Engineering Manager
+        publicIdentifier:
+          type: string
+          description: Public identifier
+          example: janesmith
+    PublicationDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Publication title
+          example: Modern JavaScript Practices
+        publisher:
+          type: string
+          description: Publisher
+          example: Medium
+        publicationDate:
+          type: string
+          description: Publication date (YYYY-MM format)
+          example: 2022-08
+        url:
+          type: string
+          description: Publication URL
+          example: https://medium.com/@johndoe/article
+        description:
+          type: string
+          description: Publication description
+          example: An article about JavaScript best practices
+    HonorDto:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Honor title
+          example: Employee of the Year
+        issuer:
+          type: string
+          description: Issuer
+          example: Acme Corp
+        issueDate:
+          type: string
+          description: Issue date (YYYY-MM format)
+          example: 2022-12
+        description:
+          type: string
+          description: Description
+          example: Awarded for outstanding contributions
+    VolunteerExperienceDto:
+      type: object
+      properties:
+        role:
+          type: string
+          description: Volunteer role
+          example: Mentor
+        organizationName:
+          type: string
+          description: Organization name
+          example: Code.org
+        cause:
+          type: string
+          description: Cause
+          example: Education
+        startDate:
+          type: string
+          description: Start date (YYYY-MM format)
+          example: 2020-01
+        endDate:
+          type: string
+          description: End date (YYYY-MM format)
+          example: 2022-12
+        description:
+          type: string
+          description: Description
+          example: Mentored students in programming
+    OrganizationDto:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Organization ID
+          example: org_123
+        mailboxId:
+          type: string
+          description: Mailbox ID
+          example: mailbox_123
+        name:
+          type: string
+          description: Organization name
+          example: Tech Organization
+    RecruiterDto:
+      type: object
+      properties:
+        ownerSeatId:
+          type: string
+          description: Owner seat ID
+          example: seat_123
+        contractId:
+          type: string
+          description: Contract ID
+          example: contract_456
+    SalesNavigatorDto:
+      type: object
+      properties:
+        ownerSeatId:
+          type: string
+          description: Owner seat ID
+          example: nav_seat_123
+        contractId:
+          type: string
+          description: Contract ID
+          example: nav_contract_456

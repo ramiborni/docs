@@ -39,6 +39,7 @@
           "api-reference/endpoint/get-account-status",
           "api-reference/endpoint/get-accounts-linkedin",
           "api-reference/endpoint/get-accounts-linkedin-id",
+          "api-reference/endpoint/get-linkedin-profile-data",
           "api-reference/endpoint/post-account-connect-linkedin",
           "api-reference/endpoint/post-account-checkpoint",
           "api-reference/endpoint/post-account-checkpoint-resend",

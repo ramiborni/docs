@@ -1,0 +1,388 @@
+---
+title: "Get LinkedIn Profile Data"
+openapi: "GET /accounts/linkedin/{id}/profile/{linkedinProfileUrl}"
+description: "Fetch detailed profile data for a LinkedIn user including work experience, education, skills, and more"
+tags:
+  - accounts
+---
+
+Fetches detailed profile data for a LinkedIn user. This endpoint retrieves comprehensive profile information including work experience, education, skills, certifications, recommendations, and more.
+
+## Path Parameters
+
+<ParamField path="id" type="string" required>
+  LinkedIn Account ID (your connected account).
+  
+  Example: `cml565gii0000novqavcdaw1i`
+</ParamField>
+
+<ParamField path="linkedinProfileUrl" type="string" required>
+  Full LinkedIn profile URL. **Must be URL-encoded**.
+  
+  Example: `https%3A%2F%2Fwww.linkedin.com%2Fin%2Fjohndoe`
+</ParamField>
+
+## Supported LinkedIn URL Formats
+
+The API automatically extracts the public identifier from various LinkedIn URL formats:
+
+| Input Format | Extracted Identifier |
+|-------------|---------------------|
+| `https://www.linkedin.com/in/johndoe` | `johndoe` |
+| `https://linkedin.com/in/johndoe` | `johndoe` |
+| `https://www.linkedin.com/in/johndoe/` | `johndoe` |
+| `https://www.linkedin.com/in/john-doe-123abc` | `john-doe-123abc` |
+| `johndoe` (fallback - raw identifier) | `johndoe` |
+
+## Response
+
+<ResponseField name="profile" type="object" required>
+  Detailed LinkedIn profile data.
+</ResponseField>
+
+<ResponseField name="quota" type="object" required>
+  Quota information for profile data requests.
+</ResponseField>
+
+### Profile Object Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `provider` | string | Provider name (always `LINKEDIN`) |
+| `providerId` | string | LinkedIn provider ID |
+| `entityUrn` | string | LinkedIn entity URN |
+| `objectUrn` | string | LinkedIn object URN |
+| `firstName` | string | First name |
+| `lastName` | string | Last name |
+| `profilePictureUrl` | string | Profile picture URL |
+| `publicProfileUrl` | string | Public LinkedIn profile URL |
+| `publicIdentifier` | string | Public identifier (username) |
+| `headline` | string | Professional headline |
+| `location` | string | Location |
+| `countryCode` | string | Country code (e.g., `US`) |
+| `industry` | string | Industry |
+| `summary` | string | Profile summary/about section |
+| `email` | string | Email address |
+| `phoneNumber` | string | Phone number |
+| `birthDate` | string | Birth date |
+| `premium` | boolean | Whether account has LinkedIn Premium |
+| `openProfile` | boolean | Whether profile is open |
+| `connectionCount` | number | Number of connections |
+| `followerCount` | number | Number of followers |
+| `occupation` | string | Current occupation |
+| `workExperience` | array | Work experience entries |
+| `education` | array | Education entries |
+| `skills` | array | Skills with endorsement counts |
+| `certifications` | array | Certifications |
+| `languages` | array | Languages and proficiency levels |
+| `projects` | array | Projects |
+| `recommendations` | object | Given and received recommendations |
+| `publications` | array | Publications |
+| `honors` | array | Honors and awards |
+| `volunteerExperience` | array | Volunteer experience |
+| `organizations` | array | Organizations |
+| `recruiter` | object | Recruiter seat information (if applicable) |
+| `salesNavigator` | object | Sales Navigator seat information (if applicable) |
+
+### Quota Object Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `used` | number | Number of profile data requests made today |
+| `remaining` | number | Number of requests remaining today |
+| `dailyCap` | number | Maximum requests allowed per day (100) |
+
+<Note>
+Quota resets daily at midnight UTC. Each successful profile fetch counts as 1 request. Quota is tracked per LinkedIn account, not per project.
+</Note>
+
+## Example Request
+
+```bash
+curl -X GET "https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/cml565gii0000novqavcdaw1i/profile/https%3A%2F%2Fwww.linkedin.com%2Fin%2Fjohndoe" \
+  -H "X-API-KEY: YOUR_API_KEY"
+```
+
+## Example Response
+
+```json
+{
+  "profile": {
+    "provider": "LINKEDIN",
+    "providerId": "ABC123XYZ",
+    "entityUrn": "urn:li:fs_miniProfile:ABC123XYZ",
+    "objectUrn": "urn:li:member:123456789",
+    "firstName": "John",
+    "lastName": "Doe",
+    "profilePictureUrl": "https://media.licdn.com/dms/image/v2/profile.jpg",
+    "publicProfileUrl": "https://www.linkedin.com/in/johndoe",
+    "publicIdentifier": "johndoe",
+    "headline": "Senior Software Engineer at Acme Corp",
+    "location": "San Francisco Bay Area",
+    "countryCode": "US",
+    "industry": "Computer Software",
+    "summary": "Experienced software engineer with 10+ years...",
+    "email": "john.doe@example.com",
+    "phoneNumber": "+1-555-123-4567",
+    "birthDate": "1990-01-15",
+    "premium": true,
+    "openProfile": false,
+    "connectionCount": 500,
+    "followerCount": 1500,
+    "occupation": "Senior Software Engineer",
+    "workExperience": [
+      {
+        "title": "Senior Software Engineer",
+        "companyName": "Acme Corp",
+        "companyId": "123456",
+        "companyLogoUrl": "https://media.licdn.com/dms/image/company.jpg",
+        "location": "San Francisco, CA",
+        "startDate": "2020-01",
+        "endDate": null,
+        "isCurrent": true,
+        "description": "Leading engineering team...",
+        "status": "Full-time",
+        "industry": ["Technology"],
+        "skills": ["JavaScript", "TypeScript"]
+      }
+    ],
+    "education": [
+      {
+        "schoolName": "Stanford University",
+        "schoolId": "stanford123",
+        "schoolLogoUrl": "https://media.licdn.com/dms/image/stanford.jpg",
+        "degreeName": "Bachelor of Science",
+        "fieldOfStudy": "Computer Science",
+        "startDate": "2012-09",
+        "endDate": "2016-06",
+        "description": "GPA: 3.9",
+        "grade": "3.9",
+        "activities": "Computer Science Club"
+      }
+    ],
+    "skills": [
+      {
+        "name": "JavaScript",
+        "endorsementCount": 42
+      },
+      {
+        "name": "TypeScript",
+        "endorsementCount": 38
+      }
+    ],
+    "certifications": [
+      {
+        "name": "AWS Solutions Architect",
+        "authority": "Amazon Web Services",
+        "issueDate": "2022-03",
+        "expirationDate": "2025-03",
+        "url": "https://www.credly.com/badges/aws",
+        "licenseNumber": "AWS-SAA-12345"
+      }
+    ],
+    "languages": [
+      {
+        "name": "English",
+        "proficiency": "NATIVE_OR_BILINGUAL"
+      },
+      {
+        "name": "Spanish",
+        "proficiency": "PROFESSIONAL_WORKING"
+      }
+    ],
+    "projects": [
+      {
+        "title": "E-commerce Platform",
+        "description": "Built a scalable e-commerce platform...",
+        "startDate": "2021-06",
+        "endDate": "2022-01",
+        "url": "https://github.com/example/project"
+      }
+    ],
+    "recommendations": {
+      "givenTotalCount": 5,
+      "given": [
+        {
+          "caption": "Recommended by John",
+          "text": "Great team player...",
+          "actor": {
+            "firstName": "Jane",
+            "lastName": "Smith",
+            "headline": "Engineering Manager",
+            "publicIdentifier": "janesmith"
+          }
+        }
+      ],
+      "receivedTotalCount": 12,
+      "received": [
+        {
+          "caption": "Received recommendation",
+          "text": "An exceptional engineer...",
+          "actor": {
+            "firstName": "Bob",
+            "lastName": "Johnson",
+            "headline": "CTO",
+            "publicIdentifier": "bobjohnson"
+          }
+        }
+      ]
+    },
+    "publications": [
+      {
+        "title": "Modern JavaScript Practices",
+        "publisher": "Medium",
+        "publicationDate": "2022-08",
+        "url": "https://medium.com/@johndoe/article",
+        "description": "An article about JavaScript best practices"
+      }
+    ],
+    "honors": [
+      {
+        "title": "Employee of the Year",
+        "issuer": "Acme Corp",
+        "issueDate": "2022-12",
+        "description": "Awarded for outstanding contributions"
+      }
+    ],
+    "volunteerExperience": [
+      {
+        "role": "Mentor",
+        "organizationName": "Code.org",
+        "cause": "Education",
+        "startDate": "2020-01",
+        "endDate": "2022-12",
+        "description": "Mentored students in programming"
+      }
+    ],
+    "organizations": [
+      {
+        "id": "org_123",
+        "mailboxId": "mailbox_123",
+        "name": "Tech Organization"
+      }
+    ],
+    "recruiter": {
+      "ownerSeatId": "seat_123",
+      "contractId": "contract_456"
+    },
+    "salesNavigator": {
+      "ownerSeatId": "nav_seat_123",
+      "contractId": "nav_contract_456"
+    }
+  },
+  "quota": {
+    "used": 5,
+    "remaining": 95,
+    "dailyCap": 100
+  }
+}
+```
+
+## Implementation Example
+
+```javascript
+const axios = require('axios');
+
+async function getLinkedInProfileData(accountId, linkedinProfileUrl) {
+  const encodedUrl = encodeURIComponent(linkedinProfileUrl);
+  const url = `https://integration-api-gateway.agreeablesea-e4815929.swedencentral.azurecontainerapps.io/api/linkedin/accounts/linkedin/${accountId}/profile/${encodedUrl}`;
+
+  try {
+    const response = await axios.get(url, {
+      headers: {
+        'X-API-KEY': process.env.SENDPILOT_API_KEY
+      }
+    });
+
+    console.log('Profile data:', response.data.profile);
+    console.log('Quota remaining:', response.data.quota.remaining);
+    return response.data;
+  } catch (error) {
+    if (error.response?.status === 429) {
+      console.error('Quota exceeded. Try again tomorrow.');
+    } else if (error.response?.status === 404) {
+      console.error('Profile not found');
+    }
+    throw error;
+  }
+}
+
+// Example usage
+getLinkedInProfileData('cml565gii0000novqavcdaw1i', 'https://www.linkedin.com/in/johndoe');
+```
+
+## Sandbox vs Production Mode
+
+| Feature | Sandbox | Production |
+|---------|---------|------------|
+| Data | Mock data | Real LinkedIn data |
+| Quota tracking | Yes | Yes |
+| Rate limiting | No | Yes (LinkedIn limits) |
+| API calls | No external calls | Real Unipile/LinkedIn calls |
+
+<Note>
+Sandbox mode returns consistent mock data for testing purposes, including sample work experience, education, skills, and other profile sections.
+</Note>
+
+## Common Errors
+
+| Status | Error | Description |
+|--------|-------|-------------|
+| 200 | Success | Profile data retrieved successfully |
+| 400 | `account_disconnected` | LinkedIn account is disconnected. Please reconnect. |
+| 401 | `Unauthorized` | Invalid or missing API key, or missing required headers |
+| 401 | `unipile_unauthorized` | LinkedIn session has expired. Please reconnect your account. |
+| 403 | `access_denied` | This LinkedIn account does not belong to your project |
+| 403 | `unipile_forbidden` | Access denied to this LinkedIn profile. The profile may be restricted. |
+| 404 | `account_not_found` | LinkedIn account not found |
+| 404 | `profile_not_found` | LinkedIn profile not found. The profile may have been deleted or the URL is incorrect. |
+| 422 | `invalid_recipient` | Recipient cannot be reached. Make sure the profile URL is valid and the profile is not locked. |
+| 429 | `quota_exceeded` | Daily profile data request limit of 100 has been reached. Please try again tomorrow. |
+| 429 | `unipile_rate_limited` | Too many requests to LinkedIn. Please try again later. |
+| 500 | `internal_error` | Failed to fetch profile data. Please try again later. |
+| 503 | `unipile_unavailable` | LinkedIn service is temporarily unavailable. Please try again later. |
+
+### Error Response Examples
+
+**Account Disconnected (400)**
+```json
+{
+  "error": "account_disconnected",
+  "message": "LinkedIn account is disconnected. Please reconnect to fetch profile data."
+}
+```
+
+**Access Denied (403)**
+```json
+{
+  "error": "access_denied",
+  "message": "This LinkedIn account does not belong to your project"
+}
+```
+
+**Profile Not Found (404)**
+```json
+{
+  "error": "profile_not_found",
+  "message": "LinkedIn profile not found. The profile may have been deleted or the URL is incorrect."
+}
+```
+
+**Quota Exceeded (429)**
+```json
+{
+  "error": "quota_exceeded",
+  "message": "Daily profile data request limit of 100 has been reached. Please try again tomorrow.",
+  "quota": {
+    "used": 100,
+    "remaining": 0,
+    "dailyCap": 100
+  }
+}
+```
+
+## See Also
+
+- [Get LinkedIn Account](/api-reference/endpoint/get-accounts-linkedin-id) - Get account details
+- [Get Account Status](/api-reference/endpoint/get-account-status) - Check quotas and limits
+- [Reconnect LinkedIn Account](/api-reference/endpoint/post-account-reconnect-linkedin) - Reconnect disconnected accounts
